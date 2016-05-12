@@ -15,12 +15,12 @@ namespace clientProtocolDefinition
         public const byte initSessionMessageHeadType1 = 0xA0;
         public const byte initSessionMessageHeadType2 = 0xA1;
 
-        public const byte cmdMessage_RebootTotalLength = 3;
-        public const byte cmdMessage_PoweroffTotalLength = 3;
+        public const byte cmdMessage_RebootTotalLength = 4;
+        public const byte cmdMessage_PoweroffTotalLength = 4;
 
     }
 
-    enum  Msg_Head_0_0
+    enum  Msg_Head_0_0 : byte
     {
         Message_Head_0_0_None = 0,
 	    Message_Head_0_0_TemperatureFlag = 1,        // 0000 0000
@@ -37,7 +37,7 @@ namespace clientProtocolDefinition
     }
 
     /*  Message 0.1:  Response Command Message */
-    enum Message_Head_0_1
+    enum Message_Head_0_1: byte
     {
         Message_Head_0_1_None = 0,
         Message_Head_0_1_Bit0_Reserved = 0,            // 0000 0000
@@ -52,7 +52,7 @@ namespace clientProtocolDefinition
     };
 
     /*  Message 0.2:  Response Data Message */
-    enum Message_Head_0_2
+    enum Message_Head_0_2 : byte
     {
         Message_Head_0_2_None = 0,
         Message_Head_0_2_Bit0_Reserved = 0,            // 0000 0000
@@ -67,7 +67,7 @@ namespace clientProtocolDefinition
     };
 
 
-    enum Message_Body_Command
+    enum Message_Body_Command : byte
     {
         Message_Command_Reboot    =   0xB0,
         Message_Command_Poweroff  =   0xB1,

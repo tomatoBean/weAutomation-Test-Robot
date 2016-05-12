@@ -9,118 +9,120 @@ namespace clientProtocolDefinition
 {
     class Program
     {
-        public static void sendCmd_RebootTargetBoard(NetworkStream sessionStream)
+
+        public const string serverIP = "192.168.100.86";
+        public const Int32 port = 13000;
+        public static NetworkStream sessionStream = null;
+        public static TcpClient client = null;
+        public static byte[] data = null;
+        public static Int32 bytes; 
+
+        public static void establishConnection_InitSession()
         {
-            Byte[] data = new Byte[GlobalAutoTestID.cmdMessage_RebootTotalLength + 1];
+            data = new byte[256];
+            Console.WriteLine("Handshakes with server ...");
+            client = new TcpClient(serverIP, port);
 
-            //string message = "This is macbook client side.";
-            // Translate the passed message into ASCII and store it as a Byte array.
-            //Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
-            // Buffer to store the response bytes.
-            //data = new Byte[256];
+            // Read the first session message of the TcpServer ack bytes.
+            sessionStream = client.GetStream();
+            bytes = sessionStream.Read(data, 0, data.Length);
 
-#if false
+            // Analyze the server response message
+            Console.WriteLine("Message head type of initial session: {0}", data[0]);
+            Console.WriteLine("Message data length: {0}", data[1]);
+            Console.WriteLine("Software version: {0}.{1}", data[3], data[2]);
+            Console.WriteLine("Main controller number: {0}", data[4]);
+
+            sessionStream.Close();
+            client.Close();
+        }
+
+        public static void sendCmd_RebootTargetBoard()
+        {
+          
+            data = new byte[GlobalAutoTestID.cmdMessage_RebootTotalLength + 1];
+
+            Console.WriteLine("Connection with server for reboot command sesssion.");
+            client = new TcpClient(serverIP, port);
+
             /* headMsg */
-            data[0] = Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
-            data[0] |= Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
-            data[0] |= Msg_Head_0_0.Message_Head_0_0_SystemCommandFlag;
+            data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+            data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+            data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_SystemCommandFlag;
 
             /* fill in fields of body message  */
             data[1] = GlobalAutoTestID.mainControllerBoardNumber;
-            data[2] = Message_Body_Command.Message_Command_Reboot;
-#endif
+            data[2] = (byte)Message_Body_Command.Message_Command_Reboot;
+            data[3] = 0;
+            data[4] = 0;
 
             // Send the message to the connected TcpServer. 
+            sessionStream = client.GetStream();
             sessionStream.Write(data, 0, data.Length);
             Console.WriteLine("Sent: Reboot Command finished.");
+
+            sessionStream.Close();
+            client.Close();
         }
 
 
         static void Main(string[] args)
         {
-            NetworkStream sessionStream = null;
-            TcpClient client = null;
-            Int32 bytes;
-
-            Console.WriteLine("/********************************************************************/");
+         
+            Console.WriteLine("********************************************************************");
 
             Console.WriteLine("**************** Command Line Console on PC Unit ********************");
 
-            Console.WriteLine("/********************************************************************/");
+            Console.WriteLine("********************************************************************");
             Console.WriteLine();
-
 
             try
             {
-                // Create a TcpClient.
-                // Note, for this client to work you need to have a TcpServer 
-                // connected to the same address as specified by the server, port
-                // combination.
-                Int32 port = 13000;
-                string message= "This is macbook client side.";
-                
-                // Translate the passed message into ASCII and store it as a Byte array.
-                Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
+
+                establishConnection_InitSession();
+               // sendCmd_RebootTargetBoard();
+                Console.Read();
+
 
                 while (true)
                 {
-                    client = new TcpClient("192.168.100.84", port);
-                    // Get a client stream for reading and writing.
-                    //  Stream stream = client.GetStream();
-                   
+                    string inputStr;
+                    int option;
 
-                    Console.WriteLine("Connecting to server ... ...");
-                    Console.WriteLine();
-                    Console.WriteLine();
+                    Console.WriteLine("*****************************************************");
+                    Console.WriteLine("****************    Command Set Menu   **************");
+                    Console.WriteLine("*****************************************************");
+                    Console.WriteLine("1. Reboot; 2. Poweroff;");
 
+                    Console.Write("Command Message Option： ");
+                    Console.Read();
+                    inputStr = Console.ReadLine();
+                    Console.WriteLine("Your choice： {0}", inputStr);
 
-                    sessionStream = client.GetStream();
+#if true
 
-                    // Analyze the server response message
-                    /////////////////////////////////////////////
-           
-                    // Buffer to store the response bytes.
-                    data = new Byte[256];
-                    
-                    // Read the first session message of the TcpServer ack bytes.
-                    bytes = sessionStream.Read(data, 0, data.Length);
-                    Console.WriteLine("Message head type of initial session: {0}",   data[0]);
-                    Console.WriteLine("Message data length: {0}", data[1]);
-                    Console.WriteLine("Software version: {0}.{1}", data[3], data[2]);
-                    Console.WriteLine("Main controller number: {0}", data[4]);
-                    Console.WriteLine();
+                    int.TryParse(inputStr, out option);
 
-                    /////////////////////////////////////////////
-
-
-                    // Send the message to the connected TcpServer. 
-                    sessionStream.Write(data, 0, data.Length);
-
-                    Console.WriteLine("Sent: {0}", message);
-
-                    // Receive the TcpServer.response.
-
-                    // String to store the response ASCII representation.
-                    String responseData = String.Empty;
-                    // Buffer to store the response bytes.
-                    data = new Byte[256];
-
-                    // Read the first batch of the TcpServer response bytes.
-                    bytes = sessionStream.Read(data, 0, data.Length);
-                    responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
-                    Console.WriteLine("Received: {0}", responseData);
+                    switch (option)
+                    {
+                        case 1:
+                            Console.WriteLine("Selected option: reboot target.");
+                            sendCmd_RebootTargetBoard();
+                            break;
+                        case 2:
+                            Console.WriteLine("Selected option: poweroff target.");
+                                break;
+                        default:
+                            break;
+                    }
+#endif
 
                     Console.WriteLine("\n Press Enter to continue...");
                     Console.WriteLine();
                     Console.WriteLine();
                     Console.Read();
 
-                    // Close everything.
-                    if (sessionStream != null)
-                        sessionStream.Close();
-                    if (client != null)
-                        client.Close();
-
+                    
                 }
             }
             catch (ArgumentNullException e)
