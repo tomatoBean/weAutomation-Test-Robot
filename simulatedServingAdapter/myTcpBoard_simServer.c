@@ -110,6 +110,79 @@ void sendCmd_RebootTargetBoard(int acceptedSocketFD)
 
 }
 
+
+void analyzeCmd_RebootTargetBoard(int acceptedSocketFD)
+{
+   unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
+   int  rc, totalCount = 0;
+
+   memset(buffer, 0, sizeof(buffer));
+
+   /*  receive command message */
+    rc = read(acceptedSocketFD, &buffer[totalCount], (BufferLength - totalCount));
+
+    if(rc < 0)
+
+    {
+
+	perror("Server-read() error");
+
+	close(acceptedSocketFD);
+
+	//exit (-1);
+
+    }
+
+    else if (rc == 0)
+
+    {
+
+	printf("Client program has issued a close()\n");
+
+	close(acceptedSocketFD);
+
+	//exit(-1);
+
+    }
+
+    else
+
+    {
+	int i;
+
+	totalCount += rc;
+
+	printf("Server-read() is OK, reboot command size=%d\n", totalCount);
+	printf("Got reboot message from the client with format:  \n");
+
+	for(i=0; i<sizeof(buffer); i++)
+		printf(" %#x ", buffer[i]);
+
+	printf("\n");
+    }
+
+    
+    /* to analyze message content */
+    if(buffer[0]&Message_Head_0_0_RequestMessageFlag)
+    {
+      if(buffer[0]&Message_Head_0_0_TargetTypeFlag)
+        printf(" Board type=%#x ", buffer[1]);
+      if(buffer[0]&Message_Head_0_0_SystemCommandFlag)
+      {
+	 if(buffer[2]&COMMAND_SESSION_MESSAGE_REBOOT)
+		printf(" Reboot command field=%#x ", buffer[2]);
+         printf("\n\n");
+      }	
+
+    }
+    else
+	perror("Message type incorrect.");
+
+}
+
+
+
+
 int main()
 
 {
@@ -291,36 +364,67 @@ int main()
 
      
 
+    /* The server will accept a connection request */
+
+    /* with this accept() function, provided the */
+
+    /* connection request does the following: */
+
+    /* - Is part of the same address family */
+
+    /* - Uses streams sockets (TCP) */
+
+    /* - Attempts to connect to the specified port */
+
+    /***********************************************/
+
+    /* accept() the incoming connection request. */
+
+    int sin_size = sizeof(struct sockaddr_in);
+
+    if((acceptSocketFD = accept(mySocketFD, (struct sockaddr *)&their_addr, &sin_size)) < 0)
+
+    {
+
+	perror("Server-accept() error");
+
+	//close(mySocketFD);
+
+	//exit (-1);
+
+    }
+
+    else
+
+	printf("Server-accept() is OK\n");
+
+
+
+    /*client IP*/
+
+    printf("Server-new socket, acceptSocketFD is OK...\n");
+
+    printf("Got connection from the client: %s\n", inet_ntoa(their_addr.sin_addr));
+
+
+    /* Talking to client with acknowledge message of initial session format */
+    printf("\n\nTaling to client with server-new socket is OK...\n");
+    initSession_AcknowledgementMessage(acceptSocketFD);
+    printf("\n\n");
+
+
+
     /*  server keeps talking line with connected client */
     while(1)
     {
 
-	    /* The server will accept a connection request */
-
-	    /* with this accept() function, provided the */
-
-	    /* connection request does the following: */
-
-	    /* - Is part of the same address family */
-
-	    /* - Uses streams sockets (TCP) */
-
-	    /* - Attempts to connect to the specified port */
-
-	    /***********************************************/
-
-	    /* accept() the incoming connection request. */
-
 	    int sin_size = sizeof(struct sockaddr_in);
-
 	    if((acceptSocketFD = accept(mySocketFD, (struct sockaddr *)&their_addr, &sin_size)) < 0)
 
 	    {
 
 		perror("Server-accept() error");
-
 		//close(mySocketFD);
-
 		//exit (-1);
 
 	    }
@@ -328,20 +432,6 @@ int main()
 	    else
 
 		printf("Server-accept() is OK\n");
-
-     
-
-	    /*client IP*/
-
-	    printf("Server-new socket, acceptSocketFD is OK...\n");
-
-	    printf("Got connection from the client: %s\n", inet_ntoa(their_addr.sin_addr));
-
-     
-            /* Talking to client with acknowledge message of initial session format */
-	    printf("\n\nTaling to client with server-new socket is OK...\n");
-	    initSession_AcknowledgementMessage(acceptSocketFD);
-	    printf("\n\n");
 
 
 	    /* The select() function allows the process to */
@@ -364,71 +454,25 @@ int main()
 
 	    FD_SET(acceptSocketFD, &read_fd);
 
+
+	    /* Wait for command */
 	    rc = select(acceptSocketFD+1, &read_fd, NULL, NULL, &timeout);
 
 	    if((rc == 1) && (FD_ISSET(acceptSocketFD, &read_fd)))
 
 	    {
 
-		    /* Read data from the client. */
-		    totalcnt = 0;
-
-		    //while(totalcnt < BufferLength)
-
 		    {
-
 			    /* When select() indicates that there is data */
 
 			    /* available, use the read() function to read */
 
-			    /* 100 bytes of the string that the */
+			    /* 100 bytes of the string that the client sent. */
 
-			    /* client sent. */
+			    /* read() command from client */
 
-			    /***********************************************/
 
-			    /* read() from client */
-
-			    rc = read(acceptSocketFD, &buffer[totalcnt], (BufferLength - totalcnt));
-
-			    if(rc < 0)
-
-			    {
-
-				perror("Server-read() error");
-
-				close(mySocketFD);
-
-				close(acceptSocketFD);
-
-				exit (-1);
-
-			    }
-
-			    else if (rc == 0)
-
-			    {
-
-				printf("Client program has issued a close()\n");
-
-				//close(mySocketFD);
-
-				close(acceptSocketFD);
-
-				//exit(-1);
-
-			    }
-
-			    else
-
-			    {
-
-				totalcnt += rc;
-
-				printf("Server-read() is OK, totalcnt=%d\n", totalcnt);
-				    printf("Got message from the client: %s\n", buffer);
-
-			    }
+			    analyzeCmd_RebootTargetBoard(acceptSocketFD);
 
 		     
 
@@ -468,10 +512,6 @@ int main()
 
      
 
-	    /* Shows the data */
-
-	    printf("Received data from the f***ing client: %s\n", buffer);
-
      
 
 	    /* Echo some bytes of string, back */
@@ -486,47 +526,6 @@ int main()
 
 	    /* back to the client. */
 
-	    printf("Server-Echoing back to client...\n");
-
-	    rc = write(acceptSocketFD, buffer, totalcnt);
-
-	    if(rc != totalcnt)
-
-	    {
-
-		    perror("Server-write() error");
-
-		    /* Get the error number. */
-
-		    rc = getsockopt(acceptSocketFD, SOL_SOCKET, SO_ERROR, &temp, &length);
-
-		    if(rc == 0)
-
-		    {
-
-			/* Print out the asynchronously */
-
-			/* received error. */
-
-			errno = temp;
-
-			perror("SO_ERROR was: ");
-
-		    }
-
-		    else
-
-			printf("Server-write() is OK\n");
-
-		     
-
-		    //close(mySocketFD);
-
-		    close(acceptSocketFD);
-
-		    exit(-1);
-
-	    }
 
 	    printf("Finish the one-time session...\n\n");
      
