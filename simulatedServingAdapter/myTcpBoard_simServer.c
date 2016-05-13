@@ -181,6 +181,75 @@ void analyzeCmd_RebootTargetBoard(int acceptedSocketFD)
 }
 
 
+void responseCmd_RebootTargetBoard(int acceptedSocketFD)
+{
+   unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
+   int  rc, totalCount = 0;
+
+   memset(buffer, 0, sizeof(buffer));
+
+   /*  receive command message */
+    rc = read(acceptedSocketFD, &buffer[totalCount], (BufferLength - totalCount));
+
+    if(rc < 0)
+
+    {
+
+	perror("Server-read() error");
+
+	close(acceptedSocketFD);
+
+	//exit (-1);
+
+    }
+
+    else if (rc == 0)
+
+    {
+
+	printf("Client program has issued a close()\n");
+
+	close(acceptedSocketFD);
+
+	//exit(-1);
+
+    }
+
+    else
+
+    {
+	int i;
+
+	totalCount += rc;
+
+	printf("Server-read() is OK, reboot command size=%d\n", totalCount);
+	printf("Got reboot message from the client with format:  \n");
+
+	for(i=0; i<sizeof(buffer); i++)
+		printf(" %#x ", buffer[i]);
+
+	printf("\n");
+    }
+
+    
+    /* to analyze message content */
+    if(buffer[0]&Message_Head_0_0_RequestMessageFlag)
+    {
+      if(buffer[0]&Message_Head_0_0_TargetTypeFlag)
+        printf(" Board type=%#x ", buffer[1]);
+      if(buffer[0]&Message_Head_0_0_SystemCommandFlag)
+      {
+	 if(buffer[2]&COMMAND_SESSION_MESSAGE_REBOOT)
+		printf(" Reboot command field=%#x ", buffer[2]);
+         printf("\n\n");
+      }	
+
+    }
+    else
+	perror("Message type incorrect.");
+
+}
+
 
 
 int main()
