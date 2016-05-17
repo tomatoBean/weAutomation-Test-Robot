@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -72,6 +72,10 @@ namespace clientProtocolDefinition
         Message_Command_Reboot    =   0xB0,
         Message_Command_Poweroff  =   0xB1,
         Message_Command_Auto_Mode =   0xB2,
-        Message_Command_Manual_Mode = 0xB3
+        Message_Command_Manual_Mode = 0xB3,
+        
+        Message_Command_Status_Success = 0x1,
+        Message_Command_Status_Failure = 0x2,
+        Message_Command_None      = 0x3
     }
 }
