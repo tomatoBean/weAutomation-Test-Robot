@@ -28,8 +28,12 @@
 
     #include <arpa/inet.h>
 
+    #include <unistd.h>
+
+
     #include "proto_format.h"
 
+    #include "com_comm.h"
 
 
 
@@ -57,6 +61,19 @@
 
 
 
+    static enum  {
+      SUCCESS = 1,
+      FAILURE = 2
+    } STATUS;
+
+    int acceptSocketFD = 0;;
+
+// main controller card to secondary card
+extern void initialize_jobs();
+extern void send_downstream_message(unsigned char *msg_data);
+extern void receive_downstream_message(unsigned char*msg_data);
+void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag);
+
 
 void initSession_AcknowledgementMessage(int acceptedSocketFD)
 {
@@ -76,10 +93,11 @@ void initSession_AcknowledgementMessage(int acceptedSocketFD)
     buffer[++index] = SOFTWARE_VERSION_MINOR_NUMBER;
     buffer[++index] = SOFTWARE_VERSION_MAJOR_NUMBER;
     /* message: hardware part number */
+
     buffer[++index] = boardNumber;
    
     totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
-    printf("Sending initial session: actual %d bytes.\n", totalCount);
+    printf("\nSending initial session: actual %d bytes.\n\n", totalCount);
 
 }
 
@@ -89,8 +107,103 @@ void initSession_AcknowledgementMessage(int acceptedSocketFD)
    Auto/Manual (Work Mode) Command
 */
 
-void sendCmd_RebootTargetBoard(int acceptedSocketFD)
+void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 {
+   unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
+   int  rc, totalCount = 0;
+
+   memset(buffer, 0, sizeof(buffer));
+
+   /*  receive command message */
+    rc = read(acceptedSocketFD, &buffer[totalCount], (BufferLength - totalCount));
+
+    if(rc < 0)
+
+    {
+
+	perror("Server-read() error");
+
+	close(acceptedSocketFD);
+
+	//exit (-1);
+
+    }
+
+    else if (rc == 0)
+
+    {
+
+	printf("Client program has issued a close()\n");
+
+	close(acceptedSocketFD);
+
+	//exit(-1);
+
+    }
+
+    else
+
+    {
+	int i;
+
+	totalCount += rc;
+
+	printf("Server-read() is OK, command size=%d\n", totalCount);
+	printf("Got command message from the client with format:  \n");
+
+	for(i=0; i<sizeof(buffer); i++)
+		printf(" %#x ", buffer[i]);
+
+	printf("\n");
+    }
+
+    
+    /* to analyze message content */
+    if(buffer[0]&Message_Head_0_0_RequestMessageFlag)
+    {
+      if(buffer[0]&Message_Head_0_0_TargetTypeFlag)
+        printf(" Board type=%#x ", buffer[1]);
+      if(buffer[0]&Message_Head_0_0_SystemCommandFlag)
+      {
+		/* judge the command type */
+		if(buffer[2] == COMMAND_SESSION_MESSAGE_REBOOT)
+		{
+		    printf("\n Reboot command field=%#x ", buffer[2]);
+                	printf("\nSend downstream command message.\n");
+			printf("\nwaiting..target....response....\n");
+			usleep(2000);
+                	printf("\nOkay, got the feedback, then..\n");
+			respondCmd_statusTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_REBOOT, FAILURE);
+		    //send_downstream_message(buffer);
+		    //receive_downstream_message(buffer);
+		    printf("\n\n");    
+		}
+		else if (buffer[2] == COMMAND_SESSION_MESSAGE_POWEROFF)
+		{
+		    printf("\n Poweroff command field=%#x ", buffer[2]);
+                	printf("\nSend downstream command message.\n");
+			printf("\nwaiting..target....response....\n");
+			usleep(2000);
+                	printf("\nOkay, got the feedback, then..\n");
+			respondCmd_statusTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_POWEROFF, 	SUCCESS);
+		    //send_downstream_message(buffer);
+		    //receive_downstream_message(buffer);
+		    printf("\n\n");    
+
+		}
+      }	
+
+    }
+    else
+	perror("Message type incorrect.");
+
+}
+
+
+void passDownCmd_RebootTargetBoard(int target)
+{
+
+  // reference as temp
    unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
    int  totalCount = 0;
 
@@ -104,149 +217,42 @@ void sendCmd_RebootTargetBoard(int acceptedSocketFD)
    buffer[1] = MAIN_CONTROLLER_BOARD_NUMBER;
    buffer[2] = COMMAND_SESSION_MESSAGE_REBOOT;
 
-
-   totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
+   // serial ??
+   //totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
    printf("Sending reboot command message: actual %d bytes.\n", totalCount);
 
-}
 
-
-void analyzeCmd_RebootTargetBoard(int acceptedSocketFD)
-{
-   unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
-   int  rc, totalCount = 0;
-
-   memset(buffer, 0, sizeof(buffer));
-
-   /*  receive command message */
-    rc = read(acceptedSocketFD, &buffer[totalCount], (BufferLength - totalCount));
-
-    if(rc < 0)
-
-    {
-
-	perror("Server-read() error");
-
-	close(acceptedSocketFD);
-
-	//exit (-1);
-
-    }
-
-    else if (rc == 0)
-
-    {
-
-	printf("Client program has issued a close()\n");
-
-	close(acceptedSocketFD);
-
-	//exit(-1);
-
-    }
-
-    else
-
-    {
-	int i;
-
-	totalCount += rc;
-
-	printf("Server-read() is OK, reboot command size=%d\n", totalCount);
-	printf("Got reboot message from the client with format:  \n");
-
-	for(i=0; i<sizeof(buffer); i++)
-		printf(" %#x ", buffer[i]);
-
-	printf("\n");
-    }
-
-    
-    /* to analyze message content */
-    if(buffer[0]&Message_Head_0_0_RequestMessageFlag)
-    {
-      if(buffer[0]&Message_Head_0_0_TargetTypeFlag)
-        printf(" Board type=%#x ", buffer[1]);
-      if(buffer[0]&Message_Head_0_0_SystemCommandFlag)
-      {
-	 if(buffer[2]&COMMAND_SESSION_MESSAGE_REBOOT)
-		printf(" Reboot command field=%#x ", buffer[2]);
-         printf("\n\n");
-      }	
-
-    }
-    else
-	perror("Message type incorrect.");
 
 }
 
-
-void responseCmd_RebootTargetBoard(int acceptedSocketFD)
+// helper function
+void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag)
 {
-   unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
-   int  rc, totalCount = 0;
 
-   memset(buffer, 0, sizeof(buffer));
+    unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
+    unsigned char boardNumber = MAIN_CONTROLLER_BOARD_NUMBER;
+    unsigned char index = 0;
 
-   /*  receive command message */
-    rc = read(acceptedSocketFD, &buffer[totalCount], (BufferLength - totalCount));
-
-    if(rc < 0)
-
-    {
-
-	perror("Server-read() error");
-
-	close(acceptedSocketFD);
-
-	//exit (-1);
-
-    }
-
-    else if (rc == 0)
-
-    {
-
-	printf("Client program has issued a close()\n");
-
-	close(acceptedSocketFD);
-
-	//exit(-1);
-
-    }
-
-    else
-
-    {
-	int i;
-
-	totalCount += rc;
-
-	printf("Server-read() is OK, reboot command size=%d\n", totalCount);
-	printf("Got reboot message from the client with format:  \n");
-
-	for(i=0; i<sizeof(buffer); i++)
-		printf(" %#x ", buffer[i]);
-
-	printf("\n");
-    }
-
+    int  totalCount = 0;
     
-    /* to analyze message content */
-    if(buffer[0]&Message_Head_0_0_RequestMessageFlag)
-    {
-      if(buffer[0]&Message_Head_0_0_TargetTypeFlag)
-        printf(" Board type=%#x ", buffer[1]);
-      if(buffer[0]&Message_Head_0_0_SystemCommandFlag)
-      {
-	 if(buffer[2]&COMMAND_SESSION_MESSAGE_REBOOT)
-		printf(" Reboot command field=%#x ", buffer[2]);
-         printf("\n\n");
-      }	
+    memset(buffer, 0, sizeof(buffer));
+    /* headMsg */
+   buffer[0] = Message_Head_0_1_ResponseMessageFlag;
+   buffer[0] |= Message_Head_0_0_TargetTypeFlag;
+   buffer[0] |= Message_Head_0_0_SystemCommandFlag;
+ 
+    /* fill in fields of body message  */
+   sysdev_temperature_number(&boardNumber, 0);
+   buffer[1] = boardNumber;
+   if(command == COMMAND_SESSION_MESSAGE_REBOOT)
+   	buffer[2] = COMMAND_SESSION_MESSAGE_REBOOT;
+   else if(command == COMMAND_SESSION_MESSAGE_POWEROFF)
+   	buffer[2] = COMMAND_SESSION_MESSAGE_POWEROFF;
+   buffer[3] = flag;
 
-    }
-    else
-	perror("Message type incorrect.");
+
+   totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
+   printf("Sending reboot command response message: actual %d bytes.\n\n\n", totalCount);
 
 }
 
@@ -258,7 +264,7 @@ int main()
 
     /* Variable and structure definitions. */
 
-    int mySocketFD, acceptSocketFD, rc, length = sizeof(int);
+    int mySocketFD, rc, length = sizeof(int);
 
     int totalcnt = 0, on = 1;
 
@@ -284,6 +290,12 @@ int main()
     int address = 0;
     
 
+
+    initialize_jobs();
+    
+    /* testing interface */
+    //send_downstream_message(NULL);
+    //receive_downstream_message(NULL);
 
     /* testing usage */
     //sysdev_temperature_number(&address, 2);
@@ -482,6 +494,8 @@ int main()
     printf("\n\n");
 
 
+    send_downstream_message(NULL);
+    receive_downstream_message(NULL);
 
     /*  server keeps talking line with connected client */
     while(1)
@@ -540,10 +554,8 @@ int main()
 
 			    /* read() command from client */
 
+			    receiveCmd_passdownTargetBoard(acceptSocketFD);
 
-			    analyzeCmd_RebootTargetBoard(acceptSocketFD);
-
-		     
 
 		    }
 
