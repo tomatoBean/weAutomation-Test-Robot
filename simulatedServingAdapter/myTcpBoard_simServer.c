@@ -105,6 +105,7 @@ void initSession_AcknowledgementMessage(int acceptedSocketFD)
    Reboot command
    Poweroff Command
    Auto/Manual (Work Mode) Command
+   Data request command
 */
 
 void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
@@ -163,7 +164,8 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
     {
       if(buffer[0]&Message_Head_0_0_TargetTypeFlag)
         printf(" Board type=%#x ", buffer[1]);
-      if(buffer[0]&Message_Head_0_0_SystemCommandFlag)
+
+      if(buffer[0]&Message_Head_0_0_SystemCommandFlag) // target command 
       {
 		/* judge the command type */
 		if(buffer[2] == COMMAND_SESSION_MESSAGE_REBOOT)
@@ -192,6 +194,22 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 
 		}
       }	
+      else  // data request
+      {
+		if (buffer[2] == DATA_REQUEST_MESSAGE_TEMPERATURE && buffer[3] == DATA_REQUEST_ALL_CHANNELS)
+		{
+		        printf("\n Data request type field=%#x ", buffer[2]);
+                	printf("\nSend downstream data request message for all channels.\n");
+			printf("\nwaiting..target....response....\n");
+			usleep(2000);
+                	printf("\nOkay, got the temperature data, then..\n");
+			respondCmd_statusTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_TEMPERATURE, SUCCESS);
+		        //send_downstream_message(buffer);
+		        //receive_downstream_message(buffer);
+		        printf("\n\n");    
+		}
+
+      }
 
     }
     else
@@ -229,7 +247,8 @@ void passDownCmd_RebootTargetBoard(int target)
 void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag)
 {
 
-    unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
+    //unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
+    unsigned char buffer[DATA_MESSAGE_RESPONSE_TOTAL_LENGTH];
     unsigned char boardNumber = MAIN_CONTROLLER_BOARD_NUMBER;
     unsigned char index = 0;
 
@@ -245,14 +264,73 @@ void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag)
    sysdev_temperature_number(&boardNumber, 0);
    buffer[1] = boardNumber;
    if(command == COMMAND_SESSION_MESSAGE_REBOOT)
+   {
    	buffer[2] = COMMAND_SESSION_MESSAGE_REBOOT;
+   	buffer[3] = flag;
+   }
    else if(command == COMMAND_SESSION_MESSAGE_POWEROFF)
+   {
    	buffer[2] = COMMAND_SESSION_MESSAGE_POWEROFF;
-   buffer[3] = flag;
+   	buffer[3] = flag;
+   }
+   else if(command == DATA_REQUEST_MESSAGE_TEMPERATURE)
+   {
+   	buffer[2] = 24;
+
+	buffer[3] = 0x1; //CH #01
+	buffer[4] = 15;
+	buffer[5] = 0x2; //CH #02
+	buffer[6] = 18;
+	buffer[7] = 0x3; //CH #03
+	buffer[8] = 15;
+	buffer[9] = 0x4; //CH #04
+	buffer[10] = 15;
+	buffer[11] = 0x5; //CH #05
+	buffer[12] = 15;
+	buffer[13] = 0x6; //CH #06
+	buffer[14] = 15;
+	buffer[15] = 0x7; //CH #07
+	buffer[16] = 15;
+	buffer[17] = 0x8; //CH #08
+	buffer[18] = 15;
+	buffer[19] = 0x9; //CH #09
+	buffer[20] = 15;
+	buffer[21] = 10; //CH #10
+	buffer[22] = 15;
+	buffer[23] = 11; //CH #11
+	buffer[24] = 15; 
+	buffer[25] = 12; //CH #12
+	buffer[26] = 15;
+	buffer[27] = 13; //CH #13
+	buffer[28] = 15;
+	buffer[29] = 14; //CH #14
+	buffer[30] = 15;
+	buffer[31] = 15; //CH #15
+	buffer[32] = 15;
+	buffer[33] = 16; //CH #16
+	buffer[34] = 15;
+	buffer[35] = 17; //CH #17
+	buffer[36] = 15;
+	buffer[37] = 18; //CH #18
+	buffer[38] = 15;
+	buffer[39] = 19; //CH #19
+	buffer[40] = 15;
+	buffer[41] = 20; //CH #20
+	buffer[42] = 15;
+	buffer[43] = 21; //CH #21
+	buffer[44] = 15;
+	buffer[45] = 22; //CH #22
+	buffer[46] = 15;
+	buffer[47] = 23; //CH #23
+	buffer[48] = 15;
+	buffer[49] = 24; //CH #24
+	buffer[50] = 25;
+   }
+
 
 
    totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
-   printf("Sending reboot command response message: actual %d bytes.\n\n\n", totalCount);
+   printf("Sending command response message: actual %d bytes.\n\n\n", totalCount);
 
 }
 
