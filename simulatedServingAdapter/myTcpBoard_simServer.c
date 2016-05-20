@@ -30,6 +30,8 @@
 
     #include <unistd.h>
 
+    #include <time.h>
+
 
     #include "proto_format.h"
 
@@ -60,18 +62,25 @@
     } while (0)
 
 
-
     static enum  {
       SUCCESS = 1,
       FAILURE = 2
     } STATUS;
 
-    int acceptSocketFD = 0;;
+    static enum  {
+      SIMULATED = 1,
+      REAL = 2
+    } MODE;
+
+
+static  int acceptSocketFD = 0;;
 
 // main controller card to secondary card
 extern void initialize_jobs();
 extern void send_downstream_message(unsigned char *msg_data);
 extern void receive_downstream_message(unsigned char*msg_data);
+
+
 void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag);
 
 
@@ -199,7 +208,7 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 		if (buffer[2] == DATA_REQUEST_MESSAGE_TEMPERATURE && buffer[3] == DATA_REQUEST_ALL_CHANNELS)
 		{
 		        printf("\n Data request type field=%#x ", buffer[2]);
-                	printf("\nSend downstream data request message for all channels.\n");
+                	printf("\nSend downstream data request TEMP message for all channels.\n");
 			printf("\nwaiting..target....response....\n");
 			usleep(2000);
                 	printf("\nOkay, got the temperature data, then..\n");
@@ -208,7 +217,19 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 		        //receive_downstream_message(buffer);
 		        printf("\n\n");    
 		}
+		else if (buffer[2] == DATA_REQUEST_MESSAGE_SIMULATED_CV && buffer[3] == DATA_REQUEST_ALL_CHANNELS)
+		{
+			printf("\n Data request type field=%#x ", buffer[2]);
+                	printf("\nSend downstream data request simulated CV message for all channels.\n");
+			printf("\nwaiting..target....response....\n");
+			usleep(2000);
+                	printf("\nOkay, got the simulated CV data, then..\n");
+			respondCmd_statusTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_SIMULATED_CV, SUCCESS);
+		        //send_downstream_message(buffer);
+		        //receive_downstream_message(buffer);
+		        printf("\n\n");    
 
+		}
       }
 
     }
@@ -217,31 +238,6 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 
 }
 
-
-void passDownCmd_RebootTargetBoard(int target)
-{
-
-  // reference as temp
-   unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
-   int  totalCount = 0;
-
-   memset(buffer, 0, sizeof(buffer));
-   /* headMsg */
-   buffer[0] = Message_Head_0_0_RequestMessageFlag;
-   buffer[0] |= Message_Head_0_0_TargetTypeFlag;
-   buffer[0] |= Message_Head_0_0_SystemCommandFlag;
- 
-   /* fill in fields of body message  */
-   buffer[1] = MAIN_CONTROLLER_BOARD_NUMBER;
-   buffer[2] = COMMAND_SESSION_MESSAGE_REBOOT;
-
-   // serial ??
-   //totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
-   printf("Sending reboot command message: actual %d bytes.\n", totalCount);
-
-
-
-}
 
 // helper function
 void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag)
@@ -326,8 +322,40 @@ void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag)
 	buffer[49] = 24; //CH #24
 	buffer[50] = 25;
    }
+   // voltage and current
+   else if(command == DATA_REQUEST_MESSAGE_SIMULATED_CV)
+   {
+	int i, count;
+	unsigned char voltage, current;
 
+	srand((int)time(0));
+        voltage=1+(int)(20.0*rand()/(RAND_MAX+1.0));
+        current=1+(int)(5.0*rand()/(RAND_MAX+1.0));
 
+   	count=buffer[2] = 24;
+
+	for(i=0; i<count; i++)
+	{
+	   buffer[3+3*i] = i+1; //CH #01
+	   buffer[4+3*i] = voltage;
+           buffer[5+3*i] = current;		 	
+	   printf("response data value:  channel=%d, voltage=%d, current=%d\n", buffer[3+3*i], buffer[4+3*i], buffer[5+3*i]);
+	}
+   }
+
+   else if(command == DATA_REQUEST_MESSAGE_CV)
+   {
+   	buffer[2] = 24;
+   }
+   // only voltage
+   else if(command == DATA_REQUEST_MESSAGE_VOLTAGE)
+   {
+   }
+   // only current
+   else if(command == DATA_REQUEST_MESSAGE_CURRENT)
+   {
+
+   }
 
    totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
    printf("Sending command response message: actual %d bytes.\n\n\n", totalCount);
