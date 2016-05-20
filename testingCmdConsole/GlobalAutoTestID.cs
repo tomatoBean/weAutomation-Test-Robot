@@ -9,6 +9,7 @@ namespace clientProtocolDefinition
     class GlobalAutoTestID
     {
         public const byte mainControllerBoardNumber = 0xF1;
+        public const byte slaveControllerTempBoardBaseNumber = 0x1;
         public const byte swImageMajorVersion = 0x2;
         public const byte swImageMinorVersion = 0x1;
 
@@ -17,6 +18,7 @@ namespace clientProtocolDefinition
 
         public const byte cmdMessage_RebootTotalLength = 4;
         public const byte cmdMessage_PoweroffTotalLength = 4;
+        public const byte dataMessage_TempTotalLength = 128;
 
     }
 
@@ -66,16 +68,30 @@ namespace clientProtocolDefinition
         Message_Head_0_2_All = Message_Head_0_2_OperationCommandFlag | Message_Head_0_2_TargetTypeFlag | Message_Head_0_2_ResponseMessageFlag
     };
 
-
+    /*  Message Body:  Request Command Message */
     enum Message_Body_Command : byte
     {
         Message_Command_Reboot    =   0xB0,
         Message_Command_Poweroff  =   0xB1,
         Message_Command_Auto_Mode =   0xB2,
         Message_Command_Manual_Mode = 0xB3,
-        
+
+        Message_Data_Request_Temperature = 0xB4,
+        Message_Data_Request_Voltage = 0xB5,
+        Message_Data_Request_Current = 0xB6,
+        Message_Data_Request_CV      = 0xB7,
+        Message_Data_Request_SIMULATED_CV = 0xB8,
+
         Message_Command_Status_Success = 0x1,
         Message_Command_Status_Failure = 0x2,
-        Message_Command_None      = 0x3
+        Message_Command_None      = 0x3,
+
+        Message_Data_All_Channels = 0xFF,
+
+        Message_Data_Correct = 0x1,
+        Message_Data_Incorrect = 0x2,
+        Message_Data_None = 0x3
     }
+
+
 }

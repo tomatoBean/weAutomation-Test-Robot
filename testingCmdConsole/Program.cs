@@ -15,7 +15,9 @@ namespace clientProtocolDefinition
         public static NetworkStream sessionStream = null;
         public static TcpClient client = null;
         public static byte[] data = null;
-        public static Int32 bytes; 
+        public static Int32 bytes;
+
+        delegate byte tempDeviceNumber(byte devIndex);
 
         public static void establishConnection_InitSession()
         {
@@ -89,11 +91,63 @@ namespace clientProtocolDefinition
                 sessionStream.Write(data, 0, data.Length);
                 Console.WriteLine("Sent: Poweroff Command finished.");
             }
+            // Temperateure request
+            else if (command == Message_Body_Command.Message_Data_Request_Temperature)
+            {
+                /* headMsg */
+                data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetChannelFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TemperatureFlag;
 
+                /* fill in fields of body message  */
+                data[1] = GlobalAutoTestID.slaveControllerTempBoardBaseNumber;
+                data[2] = (byte)Message_Body_Command.Message_Data_Request_Temperature;
+                data[3] = (byte)Message_Body_Command.Message_Data_All_Channels;
+
+                sessionStream.Write(data, 0, data.Length);
+                Console.WriteLine("Sent: Temp Data Request Command finished.");
+            }
+            // Simulated Voltage and Current request
+            else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_CV)
+            {
+                /* headMsg */
+                data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetChannelFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_VoltageFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_CurrentFlag;
+                /* fill in fields of body message  */
+                data[1] = GlobalAutoTestID.mainControllerBoardNumber;
+                data[2] = (byte)Message_Body_Command.Message_Data_Request_SIMULATED_CV;
+                data[3] = (byte)Message_Body_Command.Message_Data_All_Channels;
+
+                sessionStream.Write(data, 0, data.Length);
+                Console.WriteLine("Sent: Simulated CV Data Request Command finished.");
+            }
+            // Voltage and Current request
+            else if (command == Message_Body_Command.Message_Data_Request_CV)
+            {
+                /* headMsg */
+                data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetChannelFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_VoltageFlag;
+                data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_CurrentFlag;
+                /* fill in fields of body message  */
+                data[1] = GlobalAutoTestID.mainControllerBoardNumber;
+                data[2] = (byte)Message_Body_Command.Message_Data_Request_CV;
+                data[3] = (byte)Message_Body_Command.Message_Data_All_Channels;
+
+                sessionStream.Write(data, 0, data.Length);
+                Console.WriteLine("Sent: CV Data Request Command finished.");
+            }
         }
 
         public static void acquireCmd_ResponseMessage(Message_Body_Command command, out byte cmdStatus)
         {
+
+            data = new byte[GlobalAutoTestID.dataMessage_TempTotalLength + 1];
             // Read the first session message of the TcpServer ack bytes.
             bytes = sessionStream.Read(data, 0, data.Length);
             // Analyze the server response message
@@ -102,12 +156,12 @@ namespace clientProtocolDefinition
             cmdStatus = 0;
             if (command == Message_Body_Command.Message_Command_Reboot && data[2] == (byte)Message_Body_Command.Message_Command_Reboot)
             {
-                if(data[3] == (byte)Message_Body_Command.Message_Command_Status_Success)
+                if (data[3] == (byte)Message_Body_Command.Message_Command_Status_Success)
                 {
                     //Console.WriteLine("Command execution success.");
                     cmdStatus = (byte)Message_Body_Command.Message_Command_Status_Success;
                 }
-                
+
                 if (data[3] == (byte)Message_Body_Command.Message_Command_Status_Failure)
                 {
                     //Console.WriteLine("Command execution failure.");
@@ -129,8 +183,32 @@ namespace clientProtocolDefinition
                     cmdStatus = (byte)Message_Body_Command.Message_Command_Status_Failure;
                 }
             }
+            else if (command == Message_Body_Command.Message_Data_Request_Temperature)
+            {
+                int totalChannels = data[2];
+                Console.WriteLine("Total channels: {0}", data[2]);
+
+                for(int i=0; i<totalChannels; i++)
+                {
+
+                    Console.WriteLine("CH {0}#, Temp Value: {1}", data[3 + 2 * i], data[4 + 2 * i]);
+                }
+                   
+            }
+            else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_CV)
+            {
+                int totalChannels = data[2];
+                Console.WriteLine("Total channels: {0}", data[2]);
+
+                for (int i = 0; i < totalChannels; i++)
+                {
+
+                    Console.WriteLine("CH {0}#, Voltage:{1}, Current: {2}", data[3 + 3 * i], data[4 + 3 * i], data[5 + 3 * i]);
+                }
+
+            }
             else
-                cmdStatus= (byte)Message_Body_Command.Message_Command_None;
+                cmdStatus = (byte)Message_Body_Command.Message_Command_None;
         }
 
         static void Main(string[] args)
@@ -159,7 +237,12 @@ namespace clientProtocolDefinition
                     Console.WriteLine("*****************************************************");
                     Console.WriteLine("****************    Command Set Menu   **************");
                     Console.WriteLine("*****************************************************");
-                    Console.WriteLine("1. Reboot; 2. Poweroff;");
+                    Console.WriteLine("1. Reboot; 2. Poweroff; ");
+                    Console.WriteLine("3. Get simulated T value; 4. Get real T value.");
+                    Console.WriteLine("5. Get simulated V value; 6. Get real V value.");
+                    Console.WriteLine("7. Get simulated C value; 8. Get real C value.");
+                    Console.WriteLine("9. Get simulated CV value; 10. Get real CV value.");
+                    Console.WriteLine();
 
                     Console.Write("Command Message Option： ");
                     Console.Read();
@@ -185,8 +268,8 @@ namespace clientProtocolDefinition
                                 Console.WriteLine("Command Execution Failure.");
                             postSendCmdMessage();
                             break;
-                        case 2:
 
+                        case 2:
                             Console.WriteLine("Selected option: poweroff target.");
                             preSendCmdMessage();
                             //sendCmd_RebootTargetBoard();
@@ -196,6 +279,31 @@ namespace clientProtocolDefinition
                                 Console.WriteLine("Command Execution Success.");
                             if (mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
                                 Console.WriteLine("Command Execution Failure.");
+                            postSendCmdMessage();
+                            break;
+
+                        case 3:
+                            Console.WriteLine("Selected option: Get temperature of target.");
+                            preSendCmdMessage();
+                            //sendCmd_RebootTargetBoard();
+                            sendCmd_RequestMessage(Message_Body_Command.Message_Data_Request_Temperature);
+                            acquireCmd_ResponseMessage(Message_Body_Command.Message_Data_Request_Temperature, out mystatus);
+                            if (mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
+                                Console.WriteLine("Data Request Success.");
+                            if (mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
+                                Console.WriteLine("Data Request Failure.");
+                            postSendCmdMessage();
+                            break;
+                        case 9:
+                            Console.WriteLine("Selected option: Get Voltage & Current of target.");
+                            preSendCmdMessage();
+                            //sendCmd_RebootTargetBoard();
+                            sendCmd_RequestMessage(Message_Body_Command.Message_Data_Request_SIMULATED_CV);
+                            acquireCmd_ResponseMessage(Message_Body_Command.Message_Data_Request_SIMULATED_CV, out mystatus);
+                            if (mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
+                                Console.WriteLine("Data Request Success.");
+                            if (mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
+                                Console.WriteLine("Data Request Failure.");
                             postSendCmdMessage();
                             break;
                         default:
