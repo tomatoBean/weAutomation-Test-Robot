@@ -52,6 +52,7 @@
     #define SOFTWARE_VERSION_MINOR_NUMBER  0x1
 
     #define MAIN_CONTROLLER_BOARD_NUMBER   0xF1    
+    #define SLAVE_CONTROLLER_VOLTAGE_CURRENT_BOARD_NUMBER   0xF2    
 
     #define SLAVE_CONTROLLER_TEMPERATURE_BOARD_CHANNEL0    0x1    
 
@@ -81,7 +82,7 @@ extern void send_downstream_message(unsigned char *msg_data);
 extern void receive_downstream_message(unsigned char*msg_data);
 
 
-void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag);
+void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag);
 
 
 void initSession_AcknowledgementMessage(int acceptedSocketFD)
@@ -184,7 +185,7 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 			printf("\nwaiting..target....response....\n");
 			usleep(2000);
                 	printf("\nOkay, got the feedback, then..\n");
-			respondCmd_statusTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_REBOOT, FAILURE);
+			respondCmd_upstreamTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_REBOOT, FAILURE);
 		    //send_downstream_message(buffer);
 		    //receive_downstream_message(buffer);
 		    printf("\n\n");    
@@ -196,7 +197,7 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 			printf("\nwaiting..target....response....\n");
 			usleep(2000);
                 	printf("\nOkay, got the feedback, then..\n");
-			respondCmd_statusTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_POWEROFF, 	SUCCESS);
+			respondCmd_upstreamTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_POWEROFF, 	SUCCESS);
 		    //send_downstream_message(buffer);
 		    //receive_downstream_message(buffer);
 		    printf("\n\n");    
@@ -212,7 +213,7 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 			printf("\nwaiting..target....response....\n");
 			usleep(2000);
                 	printf("\nOkay, got the temperature data, then..\n");
-			respondCmd_statusTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_TEMPERATURE, SUCCESS);
+			respondCmd_upstreamTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_TEMPERATURE, SUCCESS);
 		        //send_downstream_message(buffer);
 		        //receive_downstream_message(buffer);
 		        printf("\n\n");    
@@ -224,7 +225,7 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 			printf("\nwaiting..target....response....\n");
 			usleep(2000);
                 	printf("\nOkay, got the simulated CV data, then..\n");
-			respondCmd_statusTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_SIMULATED_CV, SUCCESS);
+			respondCmd_upstreamTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_SIMULATED_CV, SUCCESS);
 		        //send_downstream_message(buffer);
 		        //receive_downstream_message(buffer);
 		        printf("\n\n");    
@@ -240,7 +241,7 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 
 
 // helper function
-void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag)
+void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag)
 {
 
     //unsigned char buffer[COMMAND_MESSAGE_REBOOT_TOTAL_LENGTH+1];
@@ -359,6 +360,43 @@ void respondCmd_statusTargetBoard(int acceptedSocketFD,  int command, int flag)
 
    totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
    printf("Sending command response message: actual %d bytes.\n\n\n", totalCount);
+
+}
+
+
+// message request interface
+void requestCmd_downstreamTargetBoardBySerialPort(int command)
+{
+
+    unsigned char buffer[DATA_MESSAGE_RESPONSE_TOTAL_LENGTH];
+    unsigned char boardNumber = SLAVE_CONTROLLER_VOLTAGE_CURRENT_BOARD_NUMBER;
+    unsigned char index = 0;
+
+    int  totalCount = 0;
+    
+   memset(buffer, 0, sizeof(buffer));
+
+    /* headMsg */
+   buffer[0] = Message_Head_1_0_RequestMessageFlag;
+   buffer[0] |= Message_Head_1_0_TargetTypeFlag;
+   buffer[0] |= Message_Head_1_0_SystemCommandFlag;
+ 
+ 
+   if(command == DATA_REQUEST_ALL_CHANNELS)
+   {
+	   /* fill in fields of body message  */
+	   buffer[1] = boardNumber; 
+	   buffer[2] = Message_Body_1_0_CV_AllCmdFlag;
+	   buffer[2] |= Message_Body_1_0_All_Channels;
+   }
+   // only current
+   else if(command == DATA_REQUEST_MESSAGE_CURRENT)
+   {
+
+   }
+
+   //totalCount = write(acceptedSocketFD, (void *)buffer, sizeof(buffer));
+   printf("Sending downstream message of command response: actual %d bytes.\n\n\n", totalCount);
 
 }
 
