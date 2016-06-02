@@ -231,6 +231,41 @@ namespace autoTestCmdCtrlConsole
 		{
 			bool retBool = true;
 			string [] cmdParts = cmdLine.Split(' ');
+
+			// verify help command
+			if (cmdParts [0] == "Help" ) {
+				if (cmdParts.Length == 1) { // only Connect without parameters
+					//printCorrectCmdFormat("Connect");
+					printCmdMainMenu();
+					retBool = true;
+				} else { 
+
+					switch (cmdParts [1]) {
+					case "Get":
+						printCorrectCmdFormat("Get");
+						break;
+					case "Set":
+						printCorrectCmdFormat("Set");
+						break;
+					case "Connect":
+						printCorrectCmdFormat("Connect");
+						break;
+					case "Reboot":
+						printCorrectCmdFormat("Reboot");
+						break;
+					case "Poweroff":
+						printCorrectCmdFormat("Poweroff");
+						break;
+					case "Blist":
+						printCorrectCmdFormat("Blist");
+						break;
+					default:
+						break;
+					}
+
+				}
+
+			}
 		
 			// verify connect command
 			if (cmdParts [0] == "Connect" ) {
@@ -284,6 +319,33 @@ namespace autoTestCmdCtrlConsole
 					retBool = false;
 				}
 			}
+
+			// verify Get command
+			if (cmdParts [0] == "Get") {
+				if (cmdParts.Length != 4) { // less or more parameters
+					printCorrectCmdFormat ("Get");
+					retBool = false;
+				} else { 
+					if (cmdParts [1] == "V" || cmdParts [1] == "R") { 
+							byte channel = Byte.Parse(cmdParts[2], System.Globalization.NumberStyles.HexNumber);
+						if (channel >= 0 || channel <= 0xFE) { 
+							if (cmdParts [3] == "V" || cmdParts [3] == "C" || cmdParts [3] == "T") { 
+								retBool = true;									
+							} else { // wrong Voltage/Current/Temperature
+								printCorrectCmdFormat ("Get");
+								retBool = false;
+							}
+						} else { // wrong check channel number
+							printCorrectCmdFormat ("Get");
+							retBool = false;
+						}
+					} else { // wrong virtual mode or reality
+						printCorrectCmdFormat ("Get");
+						retBool = false;
+					}
+				}
+			}
+
 				
 			return retBool;
 				
@@ -321,7 +383,7 @@ namespace autoTestCmdCtrlConsole
 			Console.WriteLine ();
 		}
 			
-		public static void printCmdMenu()
+		public static void printCmdMainMenu()
 		{
 			Console.WriteLine ("Supported command list:");
 			Console.WriteLine ();
@@ -340,11 +402,27 @@ namespace autoTestCmdCtrlConsole
 		public static void printCorrectCmdFormat(string cmdStr)
 		{
 			switch (cmdStr) {
+			case "Blist":
+				printBoardList();
+				break;
 			case "Connect":
 				Console.WriteLine ("Connect [Server IP Addr]");
 				break;
 			case "Reboot":
 				Console.WriteLine ("Reboot [Specified Target Board]");
+				break;
+			case "Poweroff":
+				Console.WriteLine ("Poweroff [Specified Target Board]");
+				break;
+			case "Get":
+				Console.WriteLine ("Get [V/R] [CH#] [V/C/T] ");
+				Console.WriteLine ("V - Virtual value; R - Real value; 255 - All channels.");
+				Console.WriteLine ("V - Voltage; C - Current; T - Temperature. ");
+				break;
+			case "Set":
+				Console.WriteLine ("Set [Object]  [S/R]");
+				Console.WriteLine ("Object: route0 - upstream communication channel; route1 - downstream communication channel.");
+				Console.WriteLine ("S - Serial; R - RS485.");
 				break;
 			default:
 				break;
@@ -359,6 +437,7 @@ namespace autoTestCmdCtrlConsole
 				Convert.ToString(GlobalAutoTestID.slaveSecondControllerBoardNumber,16));
 			Console.WriteLine ();
 		}
+
 		public static void Main (string[] args)
 		{
 			printHelpMenu ();
@@ -382,11 +461,21 @@ namespace autoTestCmdCtrlConsole
 							bool correctCmdFlag = false;
 			                
 							// help command
-							if(parts[0] == "help" || parts[0] == "?")
-			                        printCmdMenu();
+							if(parts[0] == "Help" || parts[0] == "?")
+									checkInputCmdSyntax(line);
+			                        
 							else if(parts[0] == "Blist")
 							{
 								printBoardList();
+							}
+							// get command
+							else if(parts[0] == "Get")
+							{
+								correctCmdFlag = checkInputCmdSyntax(line);
+								if(correctCmdFlag)
+								{
+									Console.WriteLine("Get command executed.");
+								}
 							}
 							// connect command
 							else if(parts[0] == "Connect")
