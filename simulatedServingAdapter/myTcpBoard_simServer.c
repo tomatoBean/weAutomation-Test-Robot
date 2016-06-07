@@ -35,7 +35,7 @@
 
     #include "proto_format.h"
 
-    #include "com_comm.h"
+    #include "../simulatedServingAdaptee/com_comm.h"
 
 
 
