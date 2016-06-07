@@ -77,9 +77,9 @@
 static  int acceptSocketFD = 0;;
 
 // main controller card to secondary card
-extern void initialize_jobs();
-extern void send_downstream_message(unsigned char *msg_data);
-extern void receive_downstream_message(unsigned char*msg_data);
+extern void initialize_jobs(int flag);
+extern void send_downstream_message(const char *msg_data, unsigned char msg_len);
+extern void receive_downstream_message(char*msg_data, unsigned char *msg_len);
 
 
 void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag);
@@ -435,9 +435,9 @@ int main()
     
 
 
-    initialize_jobs();
     
     /* testing interface */
+    //initialize_jobs();
     //send_downstream_message(NULL);
     //receive_downstream_message(NULL);
 
@@ -638,8 +638,8 @@ int main()
     printf("\n\n");
 
 
-    send_downstream_message(NULL);
-    receive_downstream_message(NULL);
+    //send_downstream_message(NULL,0);
+    //receive_downstream_message(NULL,0);
 
     /*  server keeps talking line with connected client */
     while(1)
