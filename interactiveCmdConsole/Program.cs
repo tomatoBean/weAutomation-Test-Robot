@@ -233,7 +233,7 @@ namespace autoTestCmdCtrlConsole
 			string [] cmdParts = cmdLine.Split(' ');
 
 			// verify help command
-			if (cmdParts [0] == "Help" ) {
+			if (cmdParts [0] == "Help" || cmdParts [0] == "?" ) {
 				if (cmdParts.Length == 1) { // only Connect without parameters
 					//printCorrectCmdFormat("Connect");
 					printCmdMainMenu();
@@ -327,9 +327,12 @@ namespace autoTestCmdCtrlConsole
 					retBool = false;
 				} else { 
 					if (cmdParts [1] == "V" || cmdParts [1] == "R") { 
-							byte channel = Byte.Parse(cmdParts[2], System.Globalization.NumberStyles.HexNumber);
-						if (channel >= 0 || channel <= 0xFE) { 
-							if (cmdParts [3] == "V" || cmdParts [3] == "C" || cmdParts [3] == "T") { 
+							//byte channel = Byte.Parse(cmdParts[2], System.Globalization.NumberStyles.HexNumber);
+							//int channel = Int32.Parse(cmdParts[2], System.Globalization.NumberStyles.HexNumber);
+						int channel = Convert.ToInt32(cmdParts[2]);
+						//Console.WriteLine("channel={0} ...", channel);
+						if (channel >= 0 && channel <= 255) { // special 0xFF for all channels 
+							if (cmdParts [3] == "A" || cmdParts [3] == "V" || cmdParts [3] == "C" || cmdParts [3] == "T") { 
 								retBool = true;									
 							} else { // wrong Voltage/Current/Temperature
 								printCorrectCmdFormat ("Get");
@@ -415,9 +418,9 @@ namespace autoTestCmdCtrlConsole
 				Console.WriteLine ("Poweroff [Specified Target Board]");
 				break;
 			case "Get":
-				Console.WriteLine ("Get [V/R] [CH#] [V/C/T] ");
+				Console.WriteLine ("Get [V/R] [CH#] [V/C/T/A] ");
 				Console.WriteLine ("V - Virtual value; R - Real value; 255 - All channels.");
-				Console.WriteLine ("V - Voltage; C - Current; T - Temperature. ");
+				Console.WriteLine ("V - Voltage; C - Current; T - Temperature; A - All supported paramterized values.");
 				break;
 			case "Set":
 				Console.WriteLine ("Set [Object]  [S/R]");
@@ -475,6 +478,35 @@ namespace autoTestCmdCtrlConsole
 								if(correctCmdFlag)
 								{
 									Console.WriteLine("Get command executed.");
+									switch(parts [1])
+									{
+										case "V": // simulated
+											if(parts[3] == "C") // current
+											{
+									
+											}
+											if(parts[3] == "V")  // voltage
+											{
+									
+											}
+											if(parts[3] == "A")  // current and voltage
+											{
+												byte mystatus;
+												preSendCmdMessage();
+												sendCmd_RequestMessage(Message_Body_Command.Message_Data_Request_SIMULATED_CV, GlobalAutoTestID.mainControllerBoardNumber);
+												acquireCmd_ResponseMessage(Message_Body_Command.Message_Data_Request_SIMULATED_CV, out mystatus);
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
+													Console.WriteLine("Command Execution Success.");
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
+													Console.WriteLine("Command Execution Failure.");
+												postSendCmdMessage();
+											}
+ 											break;
+										case "R": // real
+											break;
+										default:
+											break;
+									}
 								}
 							}
 							// connect command
