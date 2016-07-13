@@ -37,6 +37,7 @@
 
     #include "../simulatedServingAdaptee/com_comm.h"
 
+    #include <pthread.h>
 
 
     /* BufferLength is 100 bytes */
@@ -55,6 +56,10 @@
     #define SLAVE_CONTROLLER_VOLTAGE_CURRENT_BOARD_NUMBER   0xF2    
 
     #define SLAVE_CONTROLLER_TEMPERATURE_BOARD_CHANNEL0    0x1    
+
+    #define UDP_PORT	4000
+    #define UDP_PORT1	4001
+
 
     /* index:  ith device as address */
     #define sysdev_temperature_number(ptrDevNo, index)                                  \
@@ -80,6 +85,140 @@ static  int acceptSocketFD = 0;;
 extern void initialize_jobs(int flag);
 extern void send_downstream_message(const char *msg_data, unsigned char msg_len);
 extern void receive_downstream_message(char*msg_data, unsigned char *msg_len);
+
+
+ 
+#define NUM_THREADS 2
+ 
+/* create thread argument struct for thr_func() */
+typedef struct _thread_data_t {
+  int tid;
+  double stuff;
+} thread_data_t;
+ 
+
+
+// broadcast
+void broadcast()
+{
+
+	char BROAD_CONTENT[] = "BXAVSACK";
+
+	int inet_sock, so_broadcast = 1;
+	struct sockaddr_in adr_bc;
+	if ((inet_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	    perror("Broadcast UDP created socket error");
+	if (setsockopt(inet_sock, SOL_SOCKET, SO_BROADCAST, &so_broadcast,
+	    sizeof(so_broadcast)) < 0)
+	{
+	    perror("Broadcast UDP set socket error");
+	    close(inet_sock);
+	    return;
+	}
+
+	adr_bc.sin_family = AF_INET;
+	adr_bc.sin_port = htons(UDP_PORT1);
+	adr_bc.sin_addr.s_addr = inet_addr("255.255.255.255");
+
+	if (sendto(inet_sock, BROAD_CONTENT, strlen(BROAD_CONTENT), 0,
+	    (struct sockaddr *)&adr_bc, sizeof(adr_bc))< 0)
+	{
+	    perror("Broadcast send error!");
+	    close(inet_sock);
+	    return;
+	}
+	close(inet_sock);
+}
+
+
+// listen on port for client broadcast
+int listen_udp_port(void)
+{
+	printf("Now start listen udp func which port is 4000.\n");
+
+	int inet_sock, socklen, so_reuseaddr = 1;
+	char data[128];
+	char buff[128];
+	struct sockaddr_in addr, from;
+
+	socklen = sizeof(addr);
+	//建立socket
+
+	if ((inet_sock = socket(AF_INET, SOCK_DGRAM, 0))< 0)
+	    perror("Listen UDP created socket error");
+
+	if (setsockopt(inet_sock, SOL_SOCKET, SO_REUSEADDR, &so_reuseaddr,
+	    sizeof(so_reuseaddr)) < 0)
+	{
+	    perror("Listen UDP set socket error");
+	    close(inet_sock);
+	    return 1;
+	}
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(UDP_PORT);
+	addr.sin_family = AF_INET;
+
+	if (bind(inet_sock, (struct sockaddr *)&addr, sizeof addr)<0)
+	{
+	    perror("Listen UDP bind socket error");
+	    close(inet_sock);
+	    return 2;
+	}
+	int len;
+	for (;;)
+	{
+	    len = recvfrom(inet_sock, data, 127, 0, (struct sockaddr *)&from,
+		(socklen_t*)&socklen);
+	    if(len < 0)
+	    {
+		perror("Listen UDP send error");
+		close(inet_sock);
+		return 3;
+	    }
+	    else
+	    {
+		broadcast();
+
+	       //getpeermac(inet_sock, buff);
+		data[len] = '\0';
+		printf("收到来自%s:%d的消息:%s\n\r",
+		   inet_ntoa(from.sin_addr), ntohs(from.sin_port), data);
+		memset(data, 0, 128);
+	    }
+	    memset(&from, 0, sizeof(from));
+	}
+	close(inet_sock);
+
+	return 0;
+}
+
+
+
+/* thread function */
+void *thr_func(void *arg) {
+  thread_data_t *data = (thread_data_t *)arg;
+ 
+  while(1)
+  {
+	sleep(1);
+  	printf("hello from thr_func, thread id: %d\n", data->tid);
+	switch(data->tid)
+	{
+	  // thread #0
+	  case 0:
+	    listen_udp_port();
+	    break;
+	 // thread #1
+          case 1:
+            break;
+	  default:
+	   break;
+	}
+  }
+
+  pthread_exit(NULL);
+}
+ 
 
 
 void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag);
@@ -445,6 +584,20 @@ int main()
     //sysdev_temperature_number(&address, 2);
     //printf("actual device addr: %d\n ", address);
 
+    /* create threaded services firstly  */
+    pthread_t thr[NUM_THREADS];
+    int i, retc;
+    /* create a thread_data_t argument array */
+    thread_data_t thr_data[NUM_THREADS];
+ 
+    /* create threads */
+    for (i = 0; i < NUM_THREADS; ++i) {
+	    thr_data[i].tid = i;
+	    if ((retc = pthread_create(&thr[i], NULL, thr_func, &thr_data[i]))) {
+		      fprintf(stderr, "error: pthread_create, retc: %d\n", retc);
+	      return EXIT_FAILURE;
+    }
+  }
 
 
     /* The socket() function returns a socket descriptor */
