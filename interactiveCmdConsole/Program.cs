@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace autoTestCmdCtrlConsole
 {
@@ -12,14 +13,80 @@ namespace autoTestCmdCtrlConsole
 	class MainClass
 	{
 
-		public static string serverIP = "192.168.100.88";
+		// parameters for udp probe messages
+		private static UInt32 blockingTimes = 0;
+		private static byte[] helloBuffer = System.Text.Encoding.Default.GetBytes("BXGISNULL");
+		// to prevent bindings of multi-time address info
+		private static UdpClient rcvClient = new UdpClient(new IPEndPoint(IPAddress.Any, 4001));
+		private static IPEndPoint rcvEndpoint = new IPEndPoint(IPAddress.Any, 0);
+		private static UdpClient udpClient = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
+		private static IPEndPoint udpEndpoint = new IPEndPoint(IPAddress.Parse("255.255.255.255"), 4000);
+
+		public static string serverIP = "192.168.100.10";
 		public const Int32 port = 13000;
 		public static NetworkStream sessionStream = null;
 		public static TcpClient client = null;
 		public static byte[] data = null;
 		public static Int32 bytes = 0;
 
+		public static bool CompareByteArray(byte[] b1, byte[] b2)
+		{
+			if (b1.Length != b2.Length)
+				return false;
+			for (int i = 0; i < b1.Length; ++i)
+				if (b1[i] != b2[i])
+					return false;
+			return true;
+		}
 
+
+		public static bool probeServer()
+		{
+			// UdpClient client = new UdpClient(new IPEndPoint(IPAddress.Any, 0));
+			// IPEndPoint endpoint = new IPEndPoint(IPAddress.Parse("255.255.255.255"), 4000);
+			byte[] buf = Encoding.Default.GetBytes("BXAVS");
+			Thread t = new Thread(new ThreadStart(RecvThread));
+			t.IsBackground = true;
+			t.Start();
+
+			while (blockingTimes < 3)
+			{
+				// broadcast out
+				udpClient.Send(buf, buf.Length, udpEndpoint);
+				// count times of broadcast
+				blockingTimes++;
+				// short delay for ack message blocking
+				Thread.Sleep(1000);
+
+			}
+
+			// decide what should return
+			if (CompareByteArray(helloBuffer, System.Text.Encoding.Default.GetBytes("BXGISNULL")))
+				return false;
+			else if (CompareByteArray(helloBuffer, System.Text.Encoding.Default.GetBytes("BXAVSACK")))
+				return true;
+			else
+				return false;
+		}
+
+		// udp message reception
+		static void RecvThread()
+		{
+
+			// UdpClient client = new UdpClient(new IPEndPoint(IPAddress.Any, 4001));
+			// IPEndPoint endpoint = new IPEndPoint(IPAddress.Any, 0);
+
+			// while (true)
+			// {
+			helloBuffer = rcvClient.Receive(ref rcvEndpoint);
+			//string msg = Encoding.Default.GetString(helloBuffer);
+			// Got that message, terminate probe action
+			blockingTimes = 6;
+
+			//   }
+
+		}
+			
 		public static void preSendCmdMessage()
 		{
 			Console.WriteLine("Connection with server:  Open command sesssion.");
@@ -214,8 +281,7 @@ namespace autoTestCmdCtrlConsole
 			else
 				cmdStatus = (byte)Message_Body_Command.Message_Command_None;
 		}
-
-
+			
 		public static bool IsIPAddress(string ip)         
 		{
 
@@ -357,7 +423,9 @@ namespace autoTestCmdCtrlConsole
 		public static void establishConnection_InitSession(string targetServerIP)
 		{
 			data = new byte[256];
+
 			Console.WriteLine("Handshakes with server ...");
+
 			client = new TcpClient(targetServerIP, port);
 
 			// Read the first session message of the TcpServer ack bytes.
@@ -390,6 +458,7 @@ namespace autoTestCmdCtrlConsole
 		{
 			Console.WriteLine ("Supported command list:");
 			Console.WriteLine ();
+			Console.WriteLine ("Autoip -- automatically acquire the server IP.");
 			Console.WriteLine ("Poweroff -- poweroff the specified board.");
 			Console.WriteLine ("Reboot   -- reboot the specified board.");
 			Console.WriteLine ("Get      -- get the functional value.");
@@ -408,6 +477,9 @@ namespace autoTestCmdCtrlConsole
 			case "Blist":
 				printBoardList();
 				break;
+			case "Autoip":
+				negotiateBoardServer ();
+				break;
 			case "Connect":
 				Console.WriteLine ("Connect [Server IP Addr]");
 				break;
@@ -420,7 +492,7 @@ namespace autoTestCmdCtrlConsole
 			case "Get":
 				Console.WriteLine ("Get [V/R] [CH#] [V/C/T/A] ");
 				Console.WriteLine ("V - Virtual value; R - Real value; 255 - All channels.");
-				Console.WriteLine ("V - Voltage; C - Current; T - Temperature; A - All supported paramterized values.");
+				Console.WriteLine ("V - Voltage; C - Current; T - Board Temperature; A - All supported paramterized values.");
 				break;
 			case "Set":
 				Console.WriteLine ("Set [Object]  [S/R]");
@@ -431,7 +503,28 @@ namespace autoTestCmdCtrlConsole
 				break;
 			}
 		}
+		public static void negotiateBoardServer()
+		{
+			// initialize to prevent mis-judge
+			helloBuffer = System.Text.Encoding.Default.GetBytes("BXGISNULL");
+			blockingTimes = 0;
+			// probe server existence
+			bool retval = probeServer();
+			if (retval)
+			{
+				System.Console.WriteLine ("The background server on board is already running.");
+				// initialize the network TCP connections.
+				//establishConnection_InitSession(serverIP);
+				System.Console.WriteLine ("Connecting to master board service with success.");
+				System.Console.WriteLine ("server ip ={0}",  rcvEndpoint.Address.ToString ());
 
+			}
+			else
+			{
+				System.Console.WriteLine ("The specified server of target board is not found.");
+			}
+			System.Console.WriteLine ();
+		}
 		public static void printBoardList()
 		{
 			Console.WriteLine ("Supported target board ID list,");
@@ -466,7 +559,11 @@ namespace autoTestCmdCtrlConsole
 							// help command
 							if(parts[0] == "Help" || parts[0] == "?")
 									checkInputCmdSyntax(line);
-			                        
+							else if(parts[0] == "Autoip")
+							{
+								negotiateBoardServer();
+								//printBoardList();
+							}        
 							else if(parts[0] == "Blist")
 							{
 								printBoardList();
