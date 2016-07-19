@@ -196,6 +196,55 @@ namespace autoTestCmdCtrlConsole
 				sessionStream.Write(data, 0, data.Length);
 				Console.WriteLine("Sent: Simulated CV Data Request Command finished.");
 			}
+			// Simulated Voltage
+			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_Voltage)
+			{
+				/* headMsg */
+				data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetChannelFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_VoltageFlag;
+				/* fill in fields of body message  */
+				data[1] = GlobalAutoTestID.mainControllerBoardNumber;
+				data[2] = (byte)Message_Body_Command.Message_Data_Request_SIMULATED_Voltage;
+				data[3] = (byte)Message_Body_Command.Message_Data_All_Channels;
+
+				sessionStream.Write(data, 0, data.Length);
+				Console.WriteLine("Sent: Simulated Voltage Data Request Command finished.");
+			}
+			// Simulated Current
+			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_Current)
+			{
+				/* headMsg */
+				data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetChannelFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_CurrentFlag;
+				/* fill in fields of body message  */
+				data[1] = GlobalAutoTestID.mainControllerBoardNumber;
+				data [2] = (byte)Message_Body_Command.Message_Data_Request_SIMULATED_Current;
+				data[3] = (byte)Message_Body_Command.Message_Data_All_Channels;
+
+				sessionStream.Write(data, 0, data.Length);
+				Console.WriteLine("Sent: Simulated Current Data Request Command finished.");
+			}
+			// Simulated Temperature
+			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_Temperature)
+			{
+				/* headMsg */
+				data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetChannelFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TemperatureFlag;
+				/* fill in fields of body message  */
+				data[1] = GlobalAutoTestID.mainControllerBoardNumber;
+				data[2] = (byte)Message_Body_Command.Message_Data_Request_SIMULATED_Temperature;
+				data[3] = (byte)Message_Body_Command.Message_Data_All_Channels;
+
+				sessionStream.Write(data, 0, data.Length);
+				Console.WriteLine("Sent: Simulated Temperature Data Request Command finished.");
+			}
+
 			// Voltage and Current request
 			else if (command == Message_Body_Command.Message_Data_Request_CV)
 			{
@@ -265,6 +314,41 @@ namespace autoTestCmdCtrlConsole
 					Console.WriteLine("CH {0}#, Temp Value: {1}", data[3 + 2 * i], data[4 + 2 * i]);
 				}
 
+			}
+			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_Temperature)
+			{
+				int totalChannels = data[2];
+				Console.WriteLine("Total channels: {0}", data[2]);
+
+				for(int i=0; i<totalChannels; i++)
+				{
+
+					Console.WriteLine("CH {0}#, Temperature Value: {1}", data[3 + 2 * i], data[4 + 2 * i]);
+				}
+
+			}
+			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_Voltage)
+			{
+				int totalChannels = data[2];
+				Console.WriteLine("Total channels: {0}", data[2]);
+
+				for(int i=0; i<totalChannels; i++)
+				{
+
+					Console.WriteLine("CH {0}#, Voltage Value: {1}", data[3 + 2 * i], data[4 + 2 * i]);
+				}
+
+			}
+			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_Current)
+			{
+				int totalChannels = data[2];
+				Console.WriteLine("Total channels: {0}", data[2]);
+
+				for(int i=0; i<totalChannels; i++)
+				{
+
+					Console.WriteLine("CH {0}#, Current Value: {1}", data[3 + 2 * i], data[4 + 2 * i]);
+				}
 			}
 			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_CV)
 			{
@@ -578,13 +662,42 @@ namespace autoTestCmdCtrlConsole
 									switch(parts [1])
 									{
 										case "V": // simulated
+											if(parts[3] == "T") // temperature
+											{
+												byte mystatus;
+												preSendCmdMessage();
+												sendCmd_RequestMessage(Message_Body_Command.Message_Data_Request_SIMULATED_Temperature, GlobalAutoTestID.mainControllerBoardNumber);
+												acquireCmd_ResponseMessage(Message_Body_Command.Message_Data_Request_SIMULATED_Temperature, out mystatus);
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
+													Console.WriteLine("Temperature Request Command Execution Success.");
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
+													Console.WriteLine("Temperature Request Command Execution Failure.");
+												postSendCmdMessage();
+											}
 											if(parts[3] == "C") // current
 											{
-									
+												byte mystatus;
+												preSendCmdMessage();
+												sendCmd_RequestMessage(Message_Body_Command.Message_Data_Request_SIMULATED_Current, GlobalAutoTestID.mainControllerBoardNumber);
+												acquireCmd_ResponseMessage(Message_Body_Command.Message_Data_Request_SIMULATED_Current, out mystatus);
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
+													Console.WriteLine("Voltage Request Command Execution Success.");
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
+													Console.WriteLine("Voltage Request Command Execution Failure.");
+												postSendCmdMessage();
+
 											}
 											if(parts[3] == "V")  // voltage
 											{
-									
+												byte mystatus;
+												preSendCmdMessage();
+												sendCmd_RequestMessage(Message_Body_Command.Message_Data_Request_SIMULATED_Voltage, GlobalAutoTestID.mainControllerBoardNumber);
+												acquireCmd_ResponseMessage(Message_Body_Command.Message_Data_Request_SIMULATED_Voltage, out mystatus);
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
+													Console.WriteLine("Voltage Request Command Execution Success.");
+												if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
+													Console.WriteLine("Voltage Request Command Execution Failure.");
+												postSendCmdMessage();
 											}
 											if(parts[3] == "A")  // current and voltage
 											{
