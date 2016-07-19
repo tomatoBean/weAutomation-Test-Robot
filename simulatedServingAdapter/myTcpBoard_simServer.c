@@ -78,6 +78,12 @@
       REAL = 2
     } MODE;
 
+    static enum  {
+      UDP_PROBE_RESPONSE_THREAD = 0,
+      TCP_XXX_RESPONSE_THREAD = 1
+    } SERVER_THREAD;
+
+
 
 static  int acceptSocketFD = 0;;
 
@@ -142,8 +148,8 @@ int listen_udp_port(void)
 	struct sockaddr_in addr, from;
 
 	socklen = sizeof(addr);
-	//建立socket
 
+	//建立socket
 	if ((inet_sock = socket(AF_INET, SOCK_DGRAM, 0))< 0)
 	    perror("Listen UDP created socket error");
 
@@ -198,15 +204,15 @@ int listen_udp_port(void)
 void *thr_func(void *arg) {
   thread_data_t *data = (thread_data_t *)arg;
  
-  while(1)
-  {
+//  while(1)
+ // {
 	sleep(1);
-  	printf("hello from thr_func, thread id: %d\n", data->tid);
 	switch(data->tid)
 	{
 	  // thread #0
 	  case 0:
 	    listen_udp_port();
+	    printf("called from thr_func, udp response thread, id: %d\n", data->tid);
 	    break;
 	 // thread #1
           case 1:
@@ -214,7 +220,7 @@ void *thr_func(void *arg) {
 	  default:
 	   break;
 	}
-  }
+ // }
 
   pthread_exit(NULL);
 }
