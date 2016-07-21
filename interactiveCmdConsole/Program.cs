@@ -27,6 +27,7 @@ namespace autoTestCmdCtrlConsole
 		public static NetworkStream sessionStream = null;
 		public static TcpClient client = null;
 		public static byte[] data = null;
+		//public static sbyte[] data = null;
 		public static Int32 bytes = 0;
 
 		public static bool CompareByteArray(byte[] b1, byte[] b2)
@@ -335,7 +336,7 @@ namespace autoTestCmdCtrlConsole
 				for(int i=0; i<totalChannels; i++)
 				{
 
-					Console.WriteLine("CH {0}#, Voltage Value: {1}", data[3 + 2 * i], data[4 + 2 * i]);
+					Console.WriteLine("CH {0}#, Direction: {1}, Voltage Value: {2}", data[3 + 3 * i], data[4 + 3*i], data[5 + 3 * i]);
 				}
 
 			}
@@ -347,7 +348,7 @@ namespace autoTestCmdCtrlConsole
 				for(int i=0; i<totalChannels; i++)
 				{
 
-					Console.WriteLine("CH {0}#, Current Value: {1}", data[3 + 2 * i], data[4 + 2 * i]);
+					Console.WriteLine("CH {0}#, Direction: {1}, Current Value: {2}", data[3 + 3 * i], data[4 + 3*i], data[5 + 3 * i]);
 				}
 			}
 			else if (command == Message_Body_Command.Message_Data_Request_SIMULATED_CV)
@@ -358,7 +359,7 @@ namespace autoTestCmdCtrlConsole
 				for (int i = 0; i < totalChannels; i++)
 				{
 
-					Console.WriteLine("CH {0}#, Voltage:{1}, Current: {2}", data[3 + 3 * i], data[4 + 3 * i], data[5 + 3 * i]);
+					Console.WriteLine("CH {0}#, Direction:{1},Voltage:{2}, Direction:{3},Current: {4}", data[3 + 5 * i], data[4 + 5 * i], data[5 + 5 * i], data[6 +5*i], data[7 + 5*i]);
 				}
 
 			}
