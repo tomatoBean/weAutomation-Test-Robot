@@ -507,7 +507,7 @@ void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag
 	buffer[47] = 23; //CH #23
 	buffer[48] = 15;
 	buffer[49] = 24; //CH #24
-	buffer[50] = 25;
+	buffer[50] = 15;
    }
    // simulated voltage and current
    else if(command == DATA_REQUEST_MESSAGE_SIMULATED_CV)
@@ -523,10 +523,12 @@ void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag
 
 	for(i=0; i<count; i++)
 	{
-	   buffer[3+3*i] = i+1; //CH #01
-	   buffer[4+3*i] = voltage;
-           buffer[5+3*i] = current;		 	
-	   printf("response data value:  channel=%d, voltage=%d, current=%d\n", buffer[3+3*i], buffer[4+3*i], buffer[5+3*i]);
+	   buffer[3+5*i] = i+1; //CH #01
+	   buffer[4+5*i] = 'P';
+	   buffer[5+5*i] = voltage;
+           buffer[6+5*i] = 'P';		 	
+           buffer[7+5*i] = current;		 	
+	   printf("response data value:  channel=%d, direction=%c, voltage=%d, direction=%c,current=%d\n", buffer[3+5*i], buffer[4+5*i], buffer[5+5*i], buffer[6+5*i], buffer[7+5*i]);
 	}
    }
 
@@ -543,9 +545,10 @@ void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag
 
 	for(i=0; i<count; i++)
 	{
-	   buffer[3+2*i] = i+1; //CH #01
-	   buffer[4+2*i] = voltage;
-	   printf("response data value:  channel=%d, voltage=%d\n", buffer[3+2*i], buffer[4+2*i]);
+	   buffer[3+3*i] = i+1; //CH #01
+	   buffer[4+3*i] = 'P'; // Positive direction
+	   buffer[5+3*i] = voltage;
+	   printf("response data value:  channel=%d, direction=%c, voltage=%d\n", buffer[3+3*i], buffer[4+3*i],buffer[5+3*i]);
 	}
 
    }
@@ -562,9 +565,10 @@ void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag
 
 	for(i=0; i<count; i++)
 	{
-	   buffer[3+2*i] = i+1; //CH #01
-	   buffer[4+2*i] = current;
-	   printf("response data value:  channel=%d, current=%d\n", buffer[3+2*i], buffer[4+2*i]);
+	   buffer[3+3*i] = i+1; //CH #01
+	   buffer[4+3*i] = 'P'; // Positive direction
+	   buffer[5+3*i] = current;
+	   printf("response data value:  channel=%d, direction=%c, current=%d\n", buffer[3+3*i], buffer[4+3*i], buffer[5+3*i]);
 	}
    }
    // simulated temperature
