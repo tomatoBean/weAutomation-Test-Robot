@@ -78,6 +78,12 @@
       REAL = 2
     } MODE;
 
+    static enum  {
+      UDP_PROBE_RESPONSE_THREAD = 0,
+      TCP_XXX_RESPONSE_THREAD = 1
+    } SERVER_THREAD;
+
+
 
 static  int acceptSocketFD = 0;;
 
@@ -142,8 +148,8 @@ int listen_udp_port(void)
 	struct sockaddr_in addr, from;
 
 	socklen = sizeof(addr);
-	//建立socket
 
+	//建立socket
 	if ((inet_sock = socket(AF_INET, SOCK_DGRAM, 0))< 0)
 	    perror("Listen UDP created socket error");
 
@@ -198,15 +204,15 @@ int listen_udp_port(void)
 void *thr_func(void *arg) {
   thread_data_t *data = (thread_data_t *)arg;
  
-  while(1)
-  {
+//  while(1)
+ // {
 	sleep(1);
-  	printf("hello from thr_func, thread id: %d\n", data->tid);
 	switch(data->tid)
 	{
 	  // thread #0
 	  case 0:
 	    listen_udp_port();
+	    printf("called from thr_func, udp response thread, id: %d\n", data->tid);
 	    break;
 	 // thread #1
           case 1:
@@ -214,7 +220,7 @@ void *thr_func(void *arg) {
 	  default:
 	   break;
 	}
-  }
+ // }
 
   pthread_exit(NULL);
 }
@@ -336,7 +342,7 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 			printf("\nwaiting..target....response....\n");
 			usleep(2000);
                 	printf("\nOkay, got the feedback, then..\n");
-			respondCmd_upstreamTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_POWEROFF, 	SUCCESS);
+			respondCmd_upstreamTargetBoard(acceptSocketFD, COMMAND_SESSION_MESSAGE_POWEROFF,SUCCESS);
 		    //send_downstream_message(buffer);
 		    //receive_downstream_message(buffer);
 		    printf("\n\n");    
@@ -370,6 +376,47 @@ void receiveCmd_passdownTargetBoard(int acceptedSocketFD)
 		        printf("\n\n");    
 
 		}
+
+		else if (buffer[2] == DATA_REQUEST_MESSAGE_SIMULATED_VOLTAGE && buffer[3] == DATA_REQUEST_ALL_CHANNELS)
+		{
+			printf("\n Data request type field=%#x ", buffer[2]);
+                	printf("\nSend downstream data request simulated voltage message for all channels.\n");
+			printf("\nwaiting..target....response....\n");
+			usleep(2000);
+                	printf("\nOkay, got the simulated voltage data, then..\n");
+			respondCmd_upstreamTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_SIMULATED_VOLTAGE, SUCCESS);
+		        //send_downstream_message(buffer);
+		        //receive_downstream_message(buffer);
+		        printf("\n\n");    
+
+		}
+		else if (buffer[2] == DATA_REQUEST_MESSAGE_SIMULATED_CURRENT && buffer[3] == DATA_REQUEST_ALL_CHANNELS)
+		{
+			printf("\n Data request type field=%#x ", buffer[2]);
+                	printf("\nSend downstream data request simulated voltage message for all channels.\n");
+			printf("\nwaiting..target....response....\n");
+			usleep(2000);
+                	printf("\nOkay, got the simulated voltage data, then..\n");
+			respondCmd_upstreamTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_SIMULATED_CURRENT, SUCCESS);
+		        //send_downstream_message(buffer);
+		        //receive_downstream_message(buffer);
+		        printf("\n\n");    
+
+		}
+		else if (buffer[2] == DATA_REQUEST_MESSAGE_SIMULATED_TEMPERATURE && buffer[3] == DATA_REQUEST_ALL_CHANNELS)
+		{
+			printf("\n Data request type field=%#x ", buffer[2]);
+                	printf("\nSend downstream data request simulated temperature message for all channels.\n");
+			printf("\nwaiting..target....response....\n");
+			usleep(2000);
+                	printf("\nOkay, got the simulated voltage data, then..\n");
+			respondCmd_upstreamTargetBoard(acceptSocketFD, DATA_REQUEST_MESSAGE_SIMULATED_TEMPERATURE, SUCCESS);
+		        //send_downstream_message(buffer);
+		        //receive_downstream_message(buffer);
+		        printf("\n\n");    
+
+		}
+
       }
 
     }
@@ -462,7 +509,7 @@ void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag
 	buffer[49] = 24; //CH #24
 	buffer[50] = 25;
    }
-   // voltage and current
+   // simulated voltage and current
    else if(command == DATA_REQUEST_MESSAGE_SIMULATED_CV)
    {
 	int i, count;
@@ -483,6 +530,59 @@ void respondCmd_upstreamTargetBoard(int acceptedSocketFD,  int command, int flag
 	}
    }
 
+   // simulated voltage
+   else if(command == DATA_REQUEST_MESSAGE_SIMULATED_VOLTAGE)
+   {
+	int i, count;
+	unsigned char voltage;
+
+	srand((int)time(0));
+        voltage=1+(int)(20.0*rand()/(RAND_MAX+1.0));
+
+   	count=buffer[2] = 24;
+
+	for(i=0; i<count; i++)
+	{
+	   buffer[3+2*i] = i+1; //CH #01
+	   buffer[4+2*i] = voltage;
+	   printf("response data value:  channel=%d, voltage=%d\n", buffer[3+2*i], buffer[4+2*i]);
+	}
+
+   }
+   // simulated current
+   else if(command == DATA_REQUEST_MESSAGE_SIMULATED_CURRENT)
+   {
+	int i, count;
+	unsigned char current;
+
+	srand((int)time(0));
+        current=1+(int)(5.0*rand()/(RAND_MAX+1.0));
+
+   	count=buffer[2] = 24;
+
+	for(i=0; i<count; i++)
+	{
+	   buffer[3+2*i] = i+1; //CH #01
+	   buffer[4+2*i] = current;
+	   printf("response data value:  channel=%d, current=%d\n", buffer[3+2*i], buffer[4+2*i]);
+	}
+   }
+   // simulated temperature
+   else if(command == DATA_REQUEST_MESSAGE_SIMULATED_TEMPERATURE)
+   {
+	int i, count;
+	unsigned char temperature = 30;
+
+   	count=buffer[2] = 24;
+
+	for(i=0; i<count; i++)
+	{
+	   buffer[3+2*i] = i+1; //CH #01
+	   buffer[4+2*i] = temperature;
+	   printf("response data value:  channel=%d, temperature=%d\n", buffer[3+2*i], buffer[4+2*i]);
+	}
+
+   }
    else if(command == DATA_REQUEST_MESSAGE_CV)
    {
    	buffer[2] = 24;
