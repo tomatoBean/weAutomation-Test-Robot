@@ -128,6 +128,24 @@ namespace autoTestCmdCtrlConsole
 				sessionStream.Write(data, 0, data.Length);
 				Console.WriteLine("Sent: Reboot Command finished.");
 			}
+			if (command == Message_Body_Command.Message_Command_Calibrate)
+			{
+
+				/* headMsg */
+				data[0] = (byte)Msg_Head_0_0.Message_Head_0_0_RequestMessageFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_TargetTypeFlag;
+				data[0] |= (byte)Msg_Head_0_0.Message_Head_0_0_SystemCommandFlag;
+
+				/* fill in fields of body message  */
+				//data[1] = GlobalAutoTestID.mainControllerBoardNumber; // default
+				data[1] = targetBoardNum;
+				data[2] = (byte)Message_Body_Command.Message_Command_Calibrate;
+				data[3] = 0;
+				data[4] = 0;
+
+				sessionStream.Write(data, 0, data.Length);
+				Console.WriteLine("Sent: Calibrate Command finished.");
+			}
 			if (command == Message_Body_Command.Message_Command_Reboot)
 			{
 
@@ -289,6 +307,20 @@ namespace autoTestCmdCtrlConsole
 					cmdStatus = (byte)Message_Body_Command.Message_Command_Status_Failure;
 				}
 			}
+			else if (command == Message_Body_Command.Message_Command_Calibrate && data[2] == (byte)Message_Body_Command.Message_Command_Calibrate)
+			{
+				if (data[3] == (byte)Message_Body_Command.Message_Command_Status_Success)
+				{
+					//Console.WriteLine("Command execution success.");
+					cmdStatus = (byte)Message_Body_Command.Message_Command_Status_Success;
+				}
+
+				if (data[3] == (byte)Message_Body_Command.Message_Command_Status_Failure)
+				{
+					//Console.WriteLine("Command execution failure.");
+					cmdStatus = (byte)Message_Body_Command.Message_Command_Status_Failure;
+				}
+			}
 			else if (command == Message_Body_Command.Message_Command_Poweroff && data[2] == (byte)Message_Body_Command.Message_Command_Poweroff)
 			{
 				Console.WriteLine("Selected option: poweroff target.");
@@ -390,7 +422,7 @@ namespace autoTestCmdCtrlConsole
 					printCmdMainMenu();
 					retBool = true;
 				} else { 
-
+					retBool = false;
 					switch (cmdParts [1]) {
 					case "Get":
 						printCorrectCmdFormat("Get");
@@ -410,12 +442,14 @@ namespace autoTestCmdCtrlConsole
 					case "Blist":
 						printCorrectCmdFormat("Blist");
 						break;
+					case "Calibrate":
+						printCorrectCmdFormat("Calibrate");
+						break;
 					default:
 						break;
 					}
 
 				}
-
 			}
 		
 			// verify connect command
@@ -439,35 +473,61 @@ namespace autoTestCmdCtrlConsole
 		
 			// verify reboot command	
 			if (cmdParts [0] == "Reboot") {
-				
-				string tempStr1 = "0x" + Convert.ToString (GlobalAutoTestID.mainControllerBoardNumber, 16);
-				string tempStr2 = "0x" + Convert.ToString (GlobalAutoTestID.slaveFirstControllerBoardNumber, 16);
-				string tempStr3 = "0x" + Convert.ToString (GlobalAutoTestID.slaveSecondControllerBoardNumber, 16);
-
-			//	Console.WriteLine ("cmdParts[1]={0}, tempStr={1}", cmdParts[1], tempStr);
-				if(!string.Equals( cmdParts[1], tempStr1)
-					&& !string.Equals(cmdParts[1], tempStr2) 
-					&& !string.Equals(cmdParts[1], tempStr3))
-				{
-					Console.WriteLine ("Wrong Target Board Type.");
+				if (cmdParts.Length == 1) { // only Reboot without parameters
+					printCorrectCmdFormat ("Reboot");
 					retBool = false;
+				} else { 
+					string tempStr1 = "0x" + Convert.ToString (GlobalAutoTestID.mainControllerBoardNumber, 16);
+					string tempStr2 = "0x" + Convert.ToString (GlobalAutoTestID.slaveFirstControllerBoardNumber, 16);
+					string tempStr3 = "0x" + Convert.ToString (GlobalAutoTestID.slaveSecondControllerBoardNumber, 16);
+
+					//	Console.WriteLine ("cmdParts[1]={0}, tempStr={1}", cmdParts[1], tempStr);
+					if (!string.Equals (cmdParts [1], tempStr1)
+					  && !string.Equals (cmdParts [1], tempStr2)
+					  && !string.Equals (cmdParts [1], tempStr3)) {
+						Console.WriteLine ("Wrong Target Board Type.");
+						retBool = false;
+					}
+				}
+			}
+
+			// verify calibrate command	
+			if (cmdParts [0] == "Calibrate") {
+				if (cmdParts.Length == 1) { // only Calibrate without parameters
+					printCorrectCmdFormat ("Calibrate");
+					retBool = false;
+				} else { 
+					string tempStr1 = "0x" + Convert.ToString (GlobalAutoTestID.mainControllerBoardNumber, 16);
+					string tempStr2 = "0x" + Convert.ToString (GlobalAutoTestID.slaveFirstControllerBoardNumber, 16);
+					string tempStr3 = "0x" + Convert.ToString (GlobalAutoTestID.slaveSecondControllerBoardNumber, 16);
+
+					//	Console.WriteLine ("cmdParts[1]={0}, tempStr={1}", cmdParts[1], tempStr);
+					if (!string.Equals (cmdParts [1], tempStr1)
+					  && !string.Equals (cmdParts [1], tempStr2)
+					  && !string.Equals (cmdParts [1], tempStr3)) {
+						Console.WriteLine ("Wrong Target Board Type.");
+						retBool = false;
+					}
 				}
 			}
 
 			// verify poweroff command	
 			if (cmdParts [0] == "Poweroff") {
-
-				string tempStr1 = "0x" + Convert.ToString (GlobalAutoTestID.mainControllerBoardNumber, 16);
-				string tempStr2 = "0x" + Convert.ToString (GlobalAutoTestID.slaveFirstControllerBoardNumber, 16);
-				string tempStr3 = "0x" + Convert.ToString (GlobalAutoTestID.slaveSecondControllerBoardNumber, 16);
-
-				//	Console.WriteLine ("cmdParts[1]={0}, tempStr={1}", cmdParts[1], tempStr);
-				if(!string.Equals( cmdParts[1], tempStr1)
-					&& !string.Equals(cmdParts[1], tempStr2) 
-					&& !string.Equals(cmdParts[1], tempStr3))
-				{
-					Console.WriteLine ("Wrong Target Board Type.");
+				if (cmdParts.Length == 1) { // only Poweroff without parameters
+					printCorrectCmdFormat ("Poweroff");
 					retBool = false;
+				} else { 
+					string tempStr1 = "0x" + Convert.ToString (GlobalAutoTestID.mainControllerBoardNumber, 16);
+					string tempStr2 = "0x" + Convert.ToString (GlobalAutoTestID.slaveFirstControllerBoardNumber, 16);
+					string tempStr3 = "0x" + Convert.ToString (GlobalAutoTestID.slaveSecondControllerBoardNumber, 16);
+
+					//	Console.WriteLine ("cmdParts[1]={0}, tempStr={1}", cmdParts[1], tempStr);
+					if (!string.Equals (cmdParts [1], tempStr1)
+					  && !string.Equals (cmdParts [1], tempStr2)
+					  && !string.Equals (cmdParts [1], tempStr3)) {
+						Console.WriteLine ("Wrong Target Board Type.");
+						retBool = false;
+					}
 				}
 			}
 
@@ -543,14 +603,15 @@ namespace autoTestCmdCtrlConsole
 		{
 			Console.WriteLine ("Supported command list:");
 			Console.WriteLine ();
-			Console.WriteLine ("Autoip -- automatically acquire the server IP.");
-			Console.WriteLine ("Poweroff -- poweroff the specified board.");
-			Console.WriteLine ("Reboot   -- reboot the specified board.");
-			Console.WriteLine ("Get      -- get the functional value.");
-			Console.WriteLine ("Set      -- set the functional value.");
-			Console.WriteLine ("Blist    -- list the main controller board and slave controller board supported in system.");
-			Console.WriteLine ("Connect  -- connect with the main controller board.");
-			Console.WriteLine ("Help     -- show the supported command list.");
+			Console.WriteLine ("Autoip    -- automatically acquire the server IP.");
+			Console.WriteLine ("Poweroff  -- poweroff the specified board.");
+			Console.WriteLine ("Reboot    -- reboot the specified board.");
+			Console.WriteLine ("Get       -- get the functional value.");
+			Console.WriteLine ("Set       -- set the functional value.");
+			Console.WriteLine ("Blist     -- list the main controller board and slave controller board supported in system.");
+			Console.WriteLine ("Calibrate -- reset and calibrate AD converter unit on the specified board.");
+			Console.WriteLine ("Connect   -- connect with the main controller board.");
+			Console.WriteLine ("Help      -- show the supported command list.");
 			Console.WriteLine ();
 
 			//Console.WriteLine ("Get [Function] [CH#] -- get the functional parameter value in the specified channel.");
@@ -564,6 +625,9 @@ namespace autoTestCmdCtrlConsole
 				break;
 			case "Autoip":
 				negotiateBoardServer ();
+				break;
+			case "Calibrate":
+				Console.WriteLine ("Calibrate [Specified On-Board Target for AD Converter]");
 				break;
 			case "Connect":
 				Console.WriteLine ("Connect [Server IP Addr]");
@@ -619,6 +683,11 @@ namespace autoTestCmdCtrlConsole
 			Console.WriteLine ();
 		}
 
+		public static void calibrateADConverter()
+		{
+			
+		}
+
 		public static void Main (string[] args)
 		{
 			printHelpMenu ();
@@ -626,7 +695,6 @@ namespace autoTestCmdCtrlConsole
 			string line;
 
 			do { 
-				
 		            Console.Write(">>");
 		            line = Console.ReadLine();
 
@@ -727,6 +795,7 @@ namespace autoTestCmdCtrlConsole
 									if(correctCmdFlag)
 											establishConnection_InitSession(parts[1]);
 							}
+							// reboot command
 							else if(parts[0] == "Reboot")
 							{
 									correctCmdFlag = checkInputCmdSyntax(line);
@@ -751,6 +820,30 @@ namespace autoTestCmdCtrlConsole
 										postSendCmdMessage();
 									}
 							}
+							// calibrate command
+							else if(parts[0] == "Calibrate")
+							{
+								correctCmdFlag = checkInputCmdSyntax(line);
+								if(correctCmdFlag)
+								{
+									byte mystatus;
+
+									/* remove "0x"  */
+									string  bdNumStr = parts[1].Substring(2, parts[1].Length-2); 
+
+									byte bdNum = Byte.Parse(bdNumStr, System.Globalization.NumberStyles.HexNumber);
+
+									Console.WriteLine("to calibrate specified AD.");
+									preSendCmdMessage();
+									sendCmd_RequestMessage(Message_Body_Command.Message_Command_Calibrate, bdNum);
+									acquireCmd_ResponseMessage(Message_Body_Command.Message_Command_Calibrate, out mystatus);
+									if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
+										Console.WriteLine("Calibrate Command Execution Success.");
+									if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
+										Console.WriteLine("Calibrate Command Execution Failure.");
+									postSendCmdMessage();
+								}
+							}
 							else if(parts[0] == "Poweroff")
 							{
 								correctCmdFlag = checkInputCmdSyntax(line);
@@ -769,9 +862,9 @@ namespace autoTestCmdCtrlConsole
 									sendCmd_RequestMessage(Message_Body_Command.Message_Command_Poweroff, bdNum);
 									acquireCmd_ResponseMessage(Message_Body_Command.Message_Command_Poweroff, out mystatus);
 									if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Success)
-										Console.WriteLine("Command Execution Success.");
+										Console.WriteLine("Power-off Command Execution Success.");
 									if(mystatus == (byte)Message_Body_Command.Message_Command_Status_Failure)
-										Console.WriteLine("Command Execution Failure.");
+										Console.WriteLine("Power-off Command Execution Failure.");
 									postSendCmdMessage();
 								}
 							}

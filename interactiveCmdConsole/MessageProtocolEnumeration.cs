@@ -53,6 +53,7 @@ namespace autoTestCmdCtrlConsole
 	/*  Message Body:  Request Command Message */
 	enum Message_Body_Command : byte
 	{
+		Message_Command_Calibrate    =   0xAF,
 		Message_Command_Reboot    =   0xB0,
 		Message_Command_Poweroff  =   0xB1,
 		Message_Command_Auto_Mode =   0xB2,
